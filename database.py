@@ -327,6 +327,66 @@ def init_db():
     except sqlite3.OperationalError:
         pass
 
+    # Migration for fee engine enhancements
+    invoice_cols = [
+        ("base_fee", "REAL DEFAULT 14500.0"),
+        ("arrears_carried_forward", "REAL DEFAULT 0.0"),
+        ("credit_adjusted", "REAL DEFAULT 0.0"),
+        ("amount_paid", "REAL DEFAULT 0.0"),
+        ("balance_pending", "REAL DEFAULT 0.0"),
+        ("notes", "TEXT")
+    ]
+    for col_name, col_type in invoice_cols:
+        try:
+            cursor.execute(f"ALTER TABLE invoices ADD COLUMN {col_name} {col_type}")
+            conn.commit()
+        except sqlite3.OperationalError:
+            pass
+
+    # Ensure amount_paid and balance_pending are backfilled
+    cursor.execute("""
+    UPDATE invoices 
+    SET base_fee = amount,
+        amount_paid = CASE WHEN status = 'Paid' THEN amount ELSE 0 END,
+        balance_pending = CASE WHEN status = 'Paid' THEN 0 ELSE amount END
+    WHERE balance_pending = 0 AND status != 'Paid'
+    """)
+    conn.commit()
+
+    student_fee_cols = [
+        ("annual_fee", "REAL DEFAULT 174000.0"),
+        ("monthly_base_fee", "REAL DEFAULT 14500.0"),
+        ("credit_balance", "REAL DEFAULT 0.0")
+    ]
+    for col_name, col_type in student_fee_cols:
+        try:
+            cursor.execute(f"ALTER TABLE students ADD COLUMN {col_name} {col_type}")
+            conn.commit()
+        except sqlite3.OperationalError:
+            pass
+
+    # Create fee_payments transaction log table
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS fee_payments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        campus_id INTEGER DEFAULT 1,
+        invoice_id INTEGER NOT NULL,
+        student_id INTEGER NOT NULL,
+        receipt_number TEXT UNIQUE NOT NULL,
+        amount_paid REAL NOT NULL,
+        previous_due REAL NOT NULL,
+        balance_remaining REAL NOT NULL,
+        credit_added REAL DEFAULT 0.0,
+        payment_method TEXT NOT NULL,
+        paid_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        recorded_by TEXT,
+        notes TEXT,
+        FOREIGN KEY(invoice_id) REFERENCES invoices(id),
+        FOREIGN KEY(student_id) REFERENCES students(id)
+    )
+    ''')
+    conn.commit()
+
     conn.close()
 
 if __name__ == '__main__':

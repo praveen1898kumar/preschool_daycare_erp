@@ -11,6 +11,20 @@ from database import get_db_connection, init_db
 app = Flask(__name__)
 app.config.from_object(Config)
 
+# Ensure database tables and migrations are initialized on startup
+init_db()
+
+# Auto-seed if students table is empty on first cloud deploy
+try:
+    _conn = get_db_connection()
+    _count = _conn.execute("SELECT COUNT(*) FROM students").fetchone()[0]
+    _conn.close()
+    if _count == 0:
+        from seed_data import seed_database
+        seed_database()
+except Exception as _e:
+    pass
+
 UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'uploads', 'receipts')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
@@ -365,11 +379,74 @@ def admin_log_payment():
     now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     conn = get_db_connection()
+    inv = conn.execute("SELECT * FROM invoices WHERE id = ?", (invoice_id,)).fetchone()
+    if inv:
+        current_due = float(inv['balance_pending'] if inv['balance_pending'] is not None and inv['balance_pending'] > 0 else inv['amount'])
+        s_id = inv['student_id']
+
+        if 0 < amount < current_due:
+            # Partial payment: auto-deduct and split balance
+            remaining_pending = current_due - amount
+            conn.execute('''
+            UPDATE invoices 
+            SET amount = ?, amount_paid = ?, balance_pending = 0, status = 'Paid',
+                payment_method = ?, paid_at = ?, receipt_number = ?, approval_status = 'Approved',
+                approved_by = 'Chanchal Sharma (Director)', approved_at = ?,
+                notes = ?
+            WHERE id = ?
+            ''', (amount, amount, payment_method, now_str, receipt_no, now_str,
+                  f"Partial payment received. ₹{remaining_pending:,.0f} balance split to separate pending invoice.", inv['id']))
+
+            counter = 1
+            bal_inv_num = f"{inv['invoice_number']}-BAL"
+            while conn.execute("SELECT id FROM invoices WHERE invoice_number = ?", (bal_inv_num,)).fetchone():
+                counter += 1
+                bal_inv_num = f"{inv['invoice_number']}-BAL{counter}"
+            conn.execute('''
+            INSERT INTO invoices (
+                campus_id, student_id, parent_id, invoice_number, term_month,
+                amount, base_fee, arrears_carried_forward, credit_adjusted,
+                amount_paid, balance_pending, due_date, status, approval_status, notes
+            ) VALUES (
+                1, ?, ?, ?, ?,
+                ?, ?, 0, 0,
+                0, ?, ?, 'Pending', 'None', ?
+            )
+            ''', (s_id, inv['parent_id'], bal_inv_num, inv['term_month'],
+                  remaining_pending, remaining_pending,
+                  remaining_pending, inv['due_date'],
+                  f"Pending balance of ₹{remaining_pending:,.0f} carried from partial payment of {inv['invoice_number']}"))
+
+            conn.commit()
+            conn.close()
+            flash(f"Partial fee payment of ₹{amount:,.0f} logged (Receipt #{receipt_no})! Remaining ₹{remaining_pending:,.0f} moved to new pending invoice #{bal_inv_num}.", "success")
+            return redirect(url_for('admin_billing'))
+
+        elif amount > current_due:
+            extra_credit = amount - current_due
+            conn.execute('''
+            UPDATE invoices 
+            SET amount_paid = amount, balance_pending = 0, status = 'Paid',
+                payment_method = ?, paid_at = ?, receipt_number = ?, approval_status = 'Approved',
+                approved_by = 'Chanchal Sharma (Director)', approved_at = ?,
+                notes = ?
+            WHERE id = ?
+            ''', (payment_method, now_str, receipt_no, now_str,
+                  f"Paid in full. Extra ₹{extra_credit:,.0f} credited to advance wallet for next month.", inv['id']))
+
+            conn.execute('''
+            UPDATE students SET credit_balance = COALESCE(credit_balance, 0) + ? WHERE id = ?
+            ''', (extra_credit, s_id))
+            conn.commit()
+            conn.close()
+            flash(f"Payment of ₹{amount:,.0f} logged (Receipt #{receipt_no})! Due cleared in full and ₹{extra_credit:,.0f} added to student advance credit wallet.", "success")
+            return redirect(url_for('admin_billing'))
+
     conn.execute('''
     UPDATE invoices 
-    SET status = 'Paid', amount = ?, payment_method = ?, paid_at = ?, receipt_number = ?, approval_status = 'Approved', approved_by = 'Center Director', approved_at = ?
+    SET status = 'Paid', amount = ?, amount_paid = ?, balance_pending = 0, payment_method = ?, paid_at = ?, receipt_number = ?, approval_status = 'Approved', approved_by = 'Center Director', approved_at = ?
     WHERE id = ?
-    ''', (amount, payment_method, now_str, receipt_no, now_str, invoice_id))
+    ''', (amount, amount, payment_method, now_str, receipt_no, now_str, invoice_id))
     conn.commit()
     conn.close()
 
@@ -407,6 +484,430 @@ def admin_reject_parent_payment(invoice_id):
 
     flash(f"Payment rejected and reset to Pending. Notification sent to parent: '{reason}'", "error")
     return redirect(url_for('admin_billing'))
+
+# -----------------------------------------------------------------------------
+# DEDICATED FEES MANAGEMENT HUB (USER MANDATE)
+# -----------------------------------------------------------------------------
+@app.route('/admin/fees')
+def admin_fees_management():
+    conn = get_db_connection()
+    
+    # Fetch active students with classroom details
+    students_raw = conn.execute('''
+    SELECT s.*, c.name as classroom_name
+    FROM students s
+    LEFT JOIN classrooms c ON s.classroom_id = c.id
+    WHERE s.status = 'Active'
+    ORDER BY s.roll_number ASC
+    ''').fetchall()
+
+    students_fees = []
+    total_annual_expected = 0.0
+    total_advance_credits = 0.0
+
+    for s in students_raw:
+        s_id = s['id']
+        annual_fee = float(s['annual_fee'] or (s['monthly_base_fee'] * 12 if s['monthly_base_fee'] else 174000.0))
+        monthly_base_fee = float(s['monthly_base_fee'] or 14500.0)
+        credit_balance = float(s['credit_balance'] or 0.0)
+
+        total_annual_expected += annual_fee
+        total_advance_credits += credit_balance
+
+        # Find latest pending/overdue invoice
+        current_inv = conn.execute('''
+        SELECT * FROM invoices 
+        WHERE student_id = ? AND status IN ('Pending', 'Pending Approval', 'Overdue')
+        ORDER BY id DESC LIMIT 1
+        ''', (s_id,)).fetchone()
+
+        if not current_inv:
+            latest_inv = conn.execute('''
+            SELECT * FROM invoices 
+            WHERE student_id = ? 
+            ORDER BY id DESC LIMIT 1
+            ''', (s_id,)).fetchone()
+            current_invoice_id = latest_inv['id'] if latest_inv else 0
+            current_due = 0.0
+        else:
+            current_invoice_id = current_inv['id']
+            current_due = float(current_inv['balance_pending'] if current_inv['balance_pending'] is not None and current_inv['balance_pending'] > 0 else current_inv['amount'])
+
+        # Total arrears (unpaid balances from all pending/overdue invoices)
+        arrears_row = conn.execute('''
+        SELECT COALESCE(SUM(CASE WHEN balance_pending > 0 THEN balance_pending ELSE amount END), 0)
+        FROM invoices
+        WHERE student_id = ? AND status IN ('Pending', 'Overdue')
+        ''', (s_id,)).fetchone()
+        arrears = float(arrears_row[0]) if arrears_row else 0.0
+
+        students_fees.append({
+            'id': s_id,
+            'roll_number': s['roll_number'] or f"LM-KHD-{s_id:03d}",
+            'first_name': s['first_name'],
+            'last_name': s['last_name'],
+            'classroom_name': s['classroom_name'] or 'General',
+            'annual_fee': annual_fee,
+            'monthly_base_fee': monthly_base_fee,
+            'credit_balance': credit_balance,
+            'arrears': arrears,
+            'current_due': current_due,
+            'current_invoice_id': current_invoice_id
+        })
+
+    # Total collected YTD
+    collected_row = conn.execute('''
+    SELECT COALESCE(SUM(amount), 0) FROM invoices WHERE status = 'Paid'
+    ''').fetchone()
+    total_collected_ytd = float(collected_row[0]) if collected_row else 0.0
+
+    # Total carried arrears
+    arrears_sum_row = conn.execute('''
+    SELECT COALESCE(SUM(CASE WHEN balance_pending > 0 THEN balance_pending ELSE amount END), 0)
+    FROM invoices WHERE status IN ('Pending', 'Overdue')
+    ''').fetchone()
+    total_arrears_carried = float(arrears_sum_row[0]) if arrears_sum_row else 0.0
+
+    # Month-Wise Stats for academic year
+    month_names = ["June 2026", "July 2026", "August 2026", "September 2026", "October 2026", "November 2026"]
+    month_stats = []
+    current_term = "October 2026"
+
+    for m_name in month_names:
+        m_rows = conn.execute('''
+        SELECT 
+            COALESCE(SUM(amount), 0) as total_billed,
+            COALESCE(SUM(CASE WHEN status = 'Paid' THEN amount ELSE 0 END), 0) as total_collected,
+            COALESCE(SUM(CASE WHEN status IN ('Pending', 'Overdue') THEN (CASE WHEN balance_pending > 0 THEN balance_pending ELSE amount END) ELSE 0 END), 0) as total_arrears
+        FROM invoices
+        WHERE term_month = ?
+        ''', (m_name,)).fetchone()
+        
+        billed = float(m_rows['total_billed']) if m_rows else 0.0
+        collected = float(m_rows['total_collected']) if m_rows else 0.0
+        arrears_m = float(m_rows['total_arrears']) if m_rows else 0.0
+
+        if billed == 0:
+            billed = sum(s['monthly_base_fee'] for s in students_fees)
+
+        month_stats.append({
+            'name': m_name,
+            'billed': billed,
+            'collected': collected,
+            'arrears': arrears_m,
+            'is_current': (m_name == current_term)
+        })
+
+    conn.close()
+
+    return render_template(
+        'admin/fees_management.html',
+        active_page='admin_fees_management',
+        total_annual_expected=total_annual_expected,
+        total_collected_ytd=total_collected_ytd,
+        total_arrears_carried=total_arrears_carried,
+        total_advance_credits=total_advance_credits,
+        month_stats=month_stats,
+        students_fees=students_fees
+    )
+
+@app.route('/admin/adjust-student-fee', methods=['POST'])
+def admin_adjust_student_fee():
+    student_id = request.form.get('student_id')
+    monthly_base_fee = float(request.form.get('monthly_base_fee', '14500'))
+    annual_fee = float(request.form.get('annual_fee', str(monthly_base_fee * 12)))
+    notes = request.form.get('notes', '')
+
+    conn = get_db_connection()
+    conn.execute('''
+    UPDATE students 
+    SET monthly_base_fee = ?, annual_fee = ?
+    WHERE id = ?
+    ''', (monthly_base_fee, annual_fee, student_id))
+
+    # Update any active Pending invoice for this student to reflect new base fee
+    pending_inv = conn.execute('''
+    SELECT * FROM invoices WHERE student_id = ? AND status = 'Pending' ORDER BY id DESC LIMIT 1
+    ''', (student_id,)).fetchone()
+    if pending_inv:
+        arrears = float(pending_inv['arrears_carried_forward'] or 0.0)
+        credit = float(pending_inv['credit_adjusted'] or 0.0)
+        new_amount = max(0.0, monthly_base_fee + arrears - credit)
+        conn.execute('''
+        UPDATE invoices 
+        SET base_fee = ?, amount = ?, balance_pending = ?
+        WHERE id = ?
+        ''', (monthly_base_fee, new_amount, new_amount, pending_inv['id']))
+
+    conn.commit()
+    conn.close()
+
+    flash(f"Fee structure adjusted! Monthly base fee updated to ₹{monthly_base_fee:,.0f} and annual fee to ₹{annual_fee:,.0f}.", "success")
+    return redirect(url_for('admin_fees_management'))
+
+@app.route('/admin/record-split-payment', methods=['POST'])
+def admin_record_split_payment():
+    invoice_id = request.form.get('invoice_id')
+    student_id = request.form.get('student_id')
+    paid_amount_str = request.form.get('paid_amount', '0').replace('₹', '').replace(',', '').strip()
+    payment_method = request.form.get('payment_method', 'UPI')
+    try:
+        paid_amount = float(paid_amount_str)
+    except ValueError:
+        paid_amount = 0.0
+
+    conn = get_db_connection()
+    now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    receipt_no = f"REC-LM-{random.randint(5000, 9999)}"
+
+    inv = None
+    if invoice_id and invoice_id != '0':
+        inv = conn.execute("SELECT * FROM invoices WHERE id = ?", (invoice_id,)).fetchone()
+
+    if inv:
+        s_id = inv['student_id']
+        current_due = float(inv['balance_pending'] if inv['balance_pending'] is not None and inv['balance_pending'] > 0 else inv['amount'])
+        
+        # Case A: Partial Payment (auto-deduct & create separate pending balance entry)
+        if 0 < paid_amount < current_due:
+            remaining_pending = current_due - paid_amount
+            # 1. Settle current invoice with paid amount
+            conn.execute('''
+            UPDATE invoices 
+            SET amount = ?, amount_paid = ?, balance_pending = 0, status = 'Paid', 
+                payment_method = ?, paid_at = ?, receipt_number = ?, 
+                approval_status = 'Approved', approved_by = 'Chanchal Sharma (Director)', approved_at = ?,
+                notes = ?
+            WHERE id = ?
+            ''', (paid_amount, paid_amount, payment_method, now_str, receipt_no, now_str, 
+                  f"Partial payment received. ₹{remaining_pending:,.0f} balance split to separate pending invoice.", inv['id']))
+
+            # 2. Create another entry for remaining fee amount pending
+            counter = 1
+            bal_inv_num = f"{inv['invoice_number']}-BAL"
+            while conn.execute("SELECT id FROM invoices WHERE invoice_number = ?", (bal_inv_num,)).fetchone():
+                counter += 1
+                bal_inv_num = f"{inv['invoice_number']}-BAL{counter}"
+            conn.execute('''
+            INSERT INTO invoices (
+                campus_id, student_id, parent_id, invoice_number, term_month,
+                amount, base_fee, arrears_carried_forward, credit_adjusted,
+                amount_paid, balance_pending, due_date, status, approval_status, notes
+            ) VALUES (
+                1, ?, ?, ?, ?,
+                ?, ?, 0, 0,
+                0, ?, ?, 'Pending', 'None', ?
+            )
+            ''', (s_id, inv['parent_id'], bal_inv_num, inv['term_month'],
+                  remaining_pending, remaining_pending,
+                  remaining_pending, inv['due_date'], 
+                  f"Pending balance of ₹{remaining_pending:,.0f} carried from partial payment of {inv['invoice_number']}"))
+
+            # 3. Log transaction in fee_payments
+            conn.execute('''
+            INSERT INTO fee_payments (
+                campus_id, invoice_id, student_id, receipt_number, amount_paid,
+                previous_due, balance_remaining, credit_added, payment_method, recorded_by, notes
+            ) VALUES (
+                1, ?, ?, ?, ?,
+                ?, ?, 0, ?, 'Chanchal Sharma (Director)', 'Partial Fee Payment with Balance Split'
+            )
+            ''', (inv['id'], s_id, receipt_no, paid_amount, current_due, remaining_pending, payment_method))
+
+            flash(f"Partial payment of ₹{paid_amount:,.0f} successfully logged! Receipt #{receipt_no} issued. New pending invoice #{bal_inv_num} created for remaining ₹{remaining_pending:,.0f}.", "success")
+
+        # Case B: Overpayment / Extra amount paid (adjust to advance credit wallet)
+        elif paid_amount > current_due:
+            extra_credit = paid_amount - current_due
+            conn.execute('''
+            UPDATE invoices 
+            SET amount_paid = amount, balance_pending = 0, status = 'Paid',
+                payment_method = ?, paid_at = ?, receipt_number = ?, 
+                approval_status = 'Approved', approved_by = 'Chanchal Sharma (Director)', approved_at = ?,
+                notes = ?
+            WHERE id = ?
+            ''', (payment_method, now_str, receipt_no, now_str, 
+                  f"Paid in full. Extra ₹{extra_credit:,.0f} credited to advance wallet for next month.", inv['id']))
+
+            conn.execute('''
+            UPDATE students 
+            SET credit_balance = COALESCE(credit_balance, 0) + ? 
+            WHERE id = ?
+            ''', (extra_credit, s_id))
+
+            conn.execute('''
+            INSERT INTO fee_payments (
+                campus_id, invoice_id, student_id, receipt_number, amount_paid,
+                previous_due, balance_remaining, credit_added, payment_method, recorded_by, notes
+            ) VALUES (
+                1, ?, ?, ?, ?,
+                ?, 0, ?, ?, 'Chanchal Sharma (Director)', 'Full Payment with Extra Advance Wallet Credit'
+            )
+            ''', (inv['id'], s_id, receipt_no, paid_amount, current_due, extra_credit, payment_method))
+
+            flash(f"Payment of ₹{paid_amount:,.0f} received! Current due of ₹{current_due:,.0f} cleared in full (Receipt #{receipt_no}). Extra ₹{extra_credit:,.0f} added to student's advance wallet for next month auto-deduction!", "success")
+
+        # Case C: Exact payment
+        else:
+            conn.execute('''
+            UPDATE invoices 
+            SET amount_paid = amount, balance_pending = 0, status = 'Paid',
+                payment_method = ?, paid_at = ?, receipt_number = ?, 
+                approval_status = 'Approved', approved_by = 'Chanchal Sharma (Director)', approved_at = ?
+            WHERE id = ?
+            ''', (payment_method, now_str, receipt_no, now_str, inv['id']))
+
+            conn.execute('''
+            INSERT INTO fee_payments (
+                campus_id, invoice_id, student_id, receipt_number, amount_paid,
+                previous_due, balance_remaining, credit_added, payment_method, recorded_by, notes
+            ) VALUES (
+                1, ?, ?, ?, ?,
+                ?, 0, 0, ?, 'Chanchal Sharma (Director)', 'Exact Fee Payment Settled'
+            )
+            ''', (inv['id'], s_id, receipt_no, paid_amount, current_due, payment_method))
+
+            flash(f"Fee payment of ₹{paid_amount:,.0f} settled in full! Official Receipt #{receipt_no} generated.", "success")
+
+    else:
+        # Direct advance payment without open invoice
+        s_id = int(student_id) if student_id else 1
+        student = conn.execute("SELECT * FROM students WHERE id = ?", (s_id,)).fetchone()
+        conn.execute('''
+        UPDATE students 
+        SET credit_balance = COALESCE(credit_balance, 0) + ? 
+        WHERE id = ?
+        ''', (paid_amount, s_id))
+
+        flash(f"Advance payment of ₹{paid_amount:,.0f} added directly to {student['first_name']}'s credit wallet! Will auto-deduct from next month's invoice.", "success")
+
+    conn.commit()
+    conn.close()
+    return redirect(url_for('admin_fees_management'))
+
+@app.route('/admin/rollover-fees', methods=['POST'])
+def admin_rollover_fees():
+    target_month = request.form.get('target_month', 'November 2026')
+    if "Dec" in target_month:
+        month_code = "12"
+        due_date = "2026-12-10"
+    elif "Jan" in target_month:
+        month_code = "01"
+        due_date = "2027-01-10"
+    elif "Feb" in target_month:
+        month_code = "02"
+        due_date = "2027-02-10"
+    elif "Nov" in target_month:
+        month_code = "11"
+        due_date = "2026-11-10"
+    else:
+        month_code = "11"
+        due_date = "2026-11-10"
+
+    conn = get_db_connection()
+    students = conn.execute("SELECT * FROM students WHERE status = 'Active'").fetchall()
+
+    processed_count = 0
+    total_carried_forward = 0.0
+    total_credits_deducted = 0.0
+
+    for s in students:
+        s_id = s['id']
+        parent_id = s['parent_id'] or 1
+        base_fee = float(s['monthly_base_fee'] or (14500.0 if s['classroom_id'] != 1 else 18000.0))
+        credit_balance = float(s['credit_balance'] or 0.0)
+
+        # 1. Sum up all unpaid arrears from previous months
+        unpaid_invoices = conn.execute('''
+        SELECT * FROM invoices 
+        WHERE student_id = ? AND status IN ('Pending', 'Overdue') AND term_month != ?
+        ''', (s_id, target_month)).fetchall()
+
+        unpaid_arrears = 0.0
+        for old_inv in unpaid_invoices:
+            pending_amt = float(old_inv['balance_pending'] if old_inv['balance_pending'] is not None and old_inv['balance_pending'] > 0 else old_inv['amount'])
+            unpaid_arrears += pending_amt
+            conn.execute('''
+            UPDATE invoices 
+            SET status = 'Carried Forward', 
+                notes = COALESCE(notes, '') || ' [Arrears of ₹' || ? || ' carried forward into ' || ? || ']'
+            WHERE id = ?
+            ''', (pending_amt, target_month, old_inv['id']))
+
+        total_carried_forward += unpaid_arrears
+
+        # 2. Total due before credit deduction
+        gross_due = base_fee + unpaid_arrears
+
+        # 3. Auto-deduct advance credit from student wallet
+        if credit_balance > 0:
+            if credit_balance >= gross_due:
+                credit_applied = gross_due
+                new_credit_bal = credit_balance - gross_due
+                net_due = 0.0
+                inv_status = 'Paid'
+            else:
+                credit_applied = credit_balance
+                new_credit_bal = 0.0
+                net_due = gross_due - credit_balance
+                inv_status = 'Pending'
+        else:
+            credit_applied = 0.0
+            new_credit_bal = 0.0
+            net_due = gross_due
+            inv_status = 'Pending'
+
+        total_credits_deducted += credit_applied
+
+        # Update student credit balance
+        conn.execute('UPDATE students SET credit_balance = ? WHERE id = ?', (new_credit_bal, s_id))
+
+        # 4. Create or update target month invoice
+        inv_num = f"INV-2026-{month_code}-{s_id:03d}"
+        existing = conn.execute('SELECT id FROM invoices WHERE invoice_number = ?', (inv_num,)).fetchone()
+
+        receipt_num = f"REC-LM-{random.randint(5000, 9999)}" if inv_status == 'Paid' else None
+        now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") if inv_status == 'Paid' else None
+
+        if existing:
+            conn.execute('''
+            UPDATE invoices 
+            SET amount = ?, base_fee = ?, arrears_carried_forward = ?, credit_adjusted = ?,
+                balance_pending = ?, status = ?, term_month = ?, due_date = ?,
+                amount_paid = CASE WHEN ? = 'Paid' THEN ? ELSE 0 END,
+                receipt_number = COALESCE(receipt_number, ?),
+                paid_at = COALESCE(paid_at, ?)
+            WHERE id = ?
+            ''', (net_due, base_fee, unpaid_arrears, credit_applied, 
+                  net_due if inv_status != 'Paid' else 0, inv_status, target_month, due_date,
+                  inv_status, net_due, receipt_num, now_str, existing['id']))
+        else:
+            conn.execute('''
+            INSERT INTO invoices (
+                campus_id, student_id, parent_id, invoice_number, term_month,
+                amount, base_fee, arrears_carried_forward, credit_adjusted,
+                amount_paid, balance_pending, due_date, status, approval_status,
+                receipt_number, paid_at, notes
+            ) VALUES (
+                1, ?, ?, ?, ?,
+                ?, ?, ?, ?,
+                ?, ?, ?, ?, 'None',
+                ?, ?, ?
+            )
+            ''', (s_id, parent_id, inv_num, target_month,
+                  net_due, base_fee, unpaid_arrears, credit_applied,
+                  net_due if inv_status == 'Paid' else 0,
+                  net_due if inv_status != 'Paid' else 0,
+                  due_date, inv_status, receipt_num, now_str,
+                  f"Auto-rolled invoice for {target_month}. Base: ₹{base_fee:,.0f}, Arrears: +₹{unpaid_arrears:,.0f}, Credit: -₹{credit_applied:,.0f}"))
+
+        processed_count += 1
+
+    conn.commit()
+    conn.close()
+
+    flash(f"Monthly fee rollover complete for {target_month}! Processed {processed_count} students: Carried forward ₹{total_carried_forward:,.0f} in unpaid arrears, and auto-deducted ₹{total_credits_deducted:,.0f} in advance credits.", "success")
+    return redirect(url_for('admin_fees_management'))
 
 @app.route('/admin/staff')
 def admin_staff():

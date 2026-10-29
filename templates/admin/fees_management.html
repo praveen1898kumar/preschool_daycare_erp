@@ -1,0 +1,351 @@
+{% extends "base.html" %}
+{% block page_title %}Dedicated Fee Management Hub • Annual & Monthly Accounting{% endblock %}
+
+{% block content %}
+<div class="space-y-4">
+
+  <!-- Top KPI Strip -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+    <div class="p-3.5 bg-white rounded-2xl border border-slate-200/80 shadow-2xs">
+      <span class="text-[10px] font-bold text-slate-400 uppercase">Annual Expected Fees</span>
+      <p class="text-base sm:text-xl font-black text-slate-900 mt-0.5">₹{{ "{:,.0f}".format(total_annual_expected) }}</p>
+      <span class="text-[10px] text-slate-500 font-semibold mt-1 block">Campus Total (20 Active Students)</span>
+    </div>
+
+    <div class="p-3.5 bg-emerald-50 border border-emerald-200 rounded-2xl shadow-2xs">
+      <span class="text-[10px] font-bold text-emerald-700 uppercase">Collected Fees YTD</span>
+      <p class="text-base sm:text-xl font-black text-emerald-900 mt-0.5">₹{{ "{:,.0f}".format(total_collected_ytd) }}</p>
+      <span class="text-[10px] text-emerald-700 font-semibold mt-1 block">✓ 100% Cleared to School</span>
+    </div>
+
+    <div class="p-3.5 bg-amber-50 border border-amber-200 rounded-2xl shadow-2xs">
+      <span class="text-[10px] font-bold text-amber-700 uppercase">Carried-Forward Arrears</span>
+      <p class="text-base sm:text-xl font-black text-amber-900 mt-0.5">₹{{ "{:,.0f}".format(total_arrears_carried) }}</p>
+      <span class="text-[10px] text-amber-700 font-semibold mt-1 block">Auto-Rolled to Next Month</span>
+    </div>
+
+    <div class="p-3.5 bg-purple-50 border border-purple-200 rounded-2xl shadow-2xs">
+      <span class="text-[10px] font-bold text-purple-700 uppercase">Advance / Extra Credits</span>
+      <p class="text-base sm:text-xl font-black text-purple-900 mt-0.5">₹{{ "{:,.0f}".format(total_advance_credits) }}</p>
+      <span class="text-[10px] text-purple-700 font-semibold mt-1 block">Auto-Deducted Next Month</span>
+    </div>
+  </div>
+
+  <!-- Action Header & Month-Wise Transition Engine -->
+  <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+    <div>
+      <h2 class="text-sm font-extrabold text-slate-900 flex items-center gap-2">
+        <i class="fa-solid fa-coins text-brand-purple"></i>
+        <span>Monthly Fee Roll-Over & Auto-Deduction Engine</span>
+      </h2>
+      <p class="text-[11px] text-slate-500">
+        Auto-populates monthly fees, carries forward unpaid balances, and automatically deducts advance credit balances.
+      </p>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-2">
+      <!-- Auto Carry Forward Next Month Form -->
+      <form action="{{ url_for('admin_rollover_fees') }}" method="POST" data-loading-msg="Rolling Over Fees & Auto-Deducting Credits..." class="flex items-center gap-1.5">
+        <span class="text-xs font-bold text-slate-600 hidden sm:inline">Next Term:</span>
+        <select name="target_month" class="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700">
+          <option value="November 2026">November 2026</option>
+          <option value="December 2026">December 2026</option>
+          <option value="January 2027">January 2027</option>
+          <option value="February 2027">February 2027</option>
+        </select>
+        <button type="submit" class="px-3.5 py-1.5 bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-800 hover:to-indigo-800 text-white rounded-xl text-xs font-bold shadow-sm transition flex items-center gap-1.5">
+          <i class="fa-solid fa-arrow-right-arrow-left"></i>
+          <span>Auto-Rollover & Carry Forward</span>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Month-Wise Auto-Populated Breakdown Grid -->
+  <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs space-y-3">
+    <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+      <h3 class="text-xs font-extrabold text-slate-900 flex items-center gap-1.5">
+        <i class="fa-solid fa-calendar-days text-brand-blue"></i>
+        <span>Auto-Populated Month-Wise Fee Accounting</span>
+      </h3>
+      <span class="text-[10px] text-slate-400 font-mono">Academic Year 2026-2027</span>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
+      {% for m in month_stats %}
+      <div class="p-3 rounded-xl border {% if m.is_current %}border-purple-300 bg-purple-50/30{% else %}border-slate-200 bg-slate-50/50{% endif %} flex flex-col justify-between">
+        <div class="flex items-center justify-between mb-1">
+          <span class="text-xs font-extrabold text-slate-800">{{ m.name }}</span>
+          {% if m.is_current %}
+          <span class="text-[9px] bg-purple-600 text-white px-1.5 py-0.2 rounded font-bold">Active</span>
+          {% endif %}
+        </div>
+
+        <div class="space-y-0.5 text-[10px]">
+          <p class="text-slate-500 flex justify-between">
+            <span>Billed:</span> <strong class="text-slate-800">₹{{ "{:,.0f}".format(m.billed) }}</strong>
+          </p>
+          <p class="text-slate-500 flex justify-between">
+            <span>Collected:</span> <strong class="text-emerald-700">₹{{ "{:,.0f}".format(m.collected) }}</strong>
+          </p>
+          <p class="text-slate-500 flex justify-between">
+            <span>Arrears:</span> <strong class="text-amber-700">₹{{ "{:,.0f}".format(m.arrears) }}</strong>
+          </p>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Student-Wise Master Fee Matrix Table -->
+  <div class="bg-white rounded-2xl border border-slate-200/80 shadow-2xs overflow-hidden space-y-3 p-4">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-100">
+      <div>
+        <h3 class="text-xs font-extrabold text-slate-900 flex items-center gap-1.5">
+          <i class="fa-solid fa-user-graduate text-emerald-600"></i>
+          <span>Student Fee Accounts & Wallet Balance Master</span>
+        </h3>
+        <p class="text-[10px] text-slate-500">Adjust monthly fees, record partial payments, and manage extra advance credits.</p>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <input type="text" id="fees-table-search" oninput="filterFeeStudents()" placeholder="Search student or roll no..." class="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-purple-500">
+      </div>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-xs" id="fees-master-table">
+        <thead class="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase font-black tracking-wider text-[10px]">
+          <tr>
+            <th class="py-2.5 px-3">Roll No & Student</th>
+            <th class="py-2.5 px-3">Program</th>
+            <th class="py-2.5 px-3">Annual Fees</th>
+            <th class="py-2.5 px-3">Monthly Base Fee</th>
+            <th class="py-2.5 px-3">Carried Arrears</th>
+            <th class="py-2.5 px-3">Advance Credit</th>
+            <th class="py-2.5 px-3">Current Net Due</th>
+            <th class="py-2.5 px-3 text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100 font-medium">
+          {% for s in students_fees %}
+          <tr class="fee-student-row hover:bg-slate-50/70 transition" data-name="{{ s.first_name }} {{ s.last_name }} {{ s.roll_number }}">
+            <td class="py-2.5 px-3">
+              <span class="font-bold text-slate-900">{{ s.first_name }} {{ s.last_name }}</span>
+              <span class="text-[10px] font-mono text-purple-700 font-bold block">{{ s.roll_number }}</span>
+            </td>
+            <td class="py-2.5 px-3 text-slate-600">{{ s.classroom_name }}</td>
+            <td class="py-2.5 px-3 font-bold text-slate-900">₹{{ "{:,.0f}".format(s.annual_fee) }}</td>
+            
+            <!-- Monthly Base Fee with Edit Option -->
+            <td class="py-2.5 px-3">
+              <span class="font-bold text-slate-800">₹{{ "{:,.0f}".format(s.monthly_base_fee) }}</span>
+              <button onclick="openAdjustFeeModal('{{ s.id }}', '{{ s.first_name }} {{ s.last_name }}', '{{ s.monthly_base_fee }}', '{{ s.annual_fee }}')" class="ml-1 text-[10px] text-brand-purple hover:underline font-bold" title="Adjust Fee Structure">
+                <i class="fa-solid fa-pen-to-square"></i>
+              </button>
+            </td>
+
+            <!-- Carried Arrears -->
+            <td class="py-2.5 px-3">
+              {% if s.arrears > 0 %}
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-100 text-rose-800">
+                +₹{{ "{:,.0f}".format(s.arrears) }}
+              </span>
+              {% else %}
+              <span class="text-slate-400">₹0</span>
+              {% endif %}
+            </td>
+
+            <!-- Advance Credit Wallet (Extra amount paid) -->
+            <td class="py-2.5 px-3">
+              {% if s.credit_balance > 0 %}
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800">
+                -₹{{ "{:,.0f}".format(s.credit_balance) }} Credit
+              </span>
+              {% else %}
+              <span class="text-slate-400">₹0</span>
+              {% endif %}
+            </td>
+
+            <!-- Current Net Due -->
+            <td class="py-2.5 px-3">
+              {% if s.current_due > 0 %}
+              <span class="font-black text-amber-700 text-sm">₹{{ "{:,.0f}".format(s.current_due) }}</span>
+              {% else %}
+              <span class="text-emerald-600 font-bold text-xs">✓ Cleared</span>
+              {% endif %}
+            </td>
+
+            <!-- Actions -->
+            <td class="py-2.5 px-3 text-right space-x-1">
+              {% if s.current_due > 0 %}
+              <button type="button" onclick="openPaymentSplitModal('{{ s.current_invoice_id }}', '{{ s.id }}', '{{ s.first_name }} {{ s.last_name }} ({{ s.roll_number }})', '{{ s.current_due }}')" class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition shadow-2xs">
+                Record Payment
+              </button>
+              {% else %}
+              <button type="button" onclick="openPaymentSplitModal('{{ s.current_invoice_id }}', '{{ s.id }}', '{{ s.first_name }} {{ s.last_name }} ({{ s.roll_number }})', '0')" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition">
+                + Add Advance
+              </button>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- MODAL 1: ADJUST MONTHLY & ANNUAL FEE STRUCTURE (USER MANDATE) -->
+  <div id="adjust-fee-modal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-slate-200">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <h3 class="text-sm font-extrabold text-slate-900 flex items-center gap-2">
+          <i class="fa-solid fa-sliders text-brand-purple"></i>
+          <span>Adjust Monthly Fee Structure</span>
+        </h3>
+        <button onclick="document.getElementById('adjust-fee-modal').classList.add('hidden')" class="p-1 text-slate-400 hover:text-slate-600">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <form action="{{ url_for('admin_adjust_student_fee') }}" method="POST" data-loading-msg="Updating Student Fee Structure..." class="mt-4 space-y-3">
+        <input type="hidden" name="student_id" id="adjust-student-id">
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Student</label>
+          <input type="text" id="adjust-student-name" readonly class="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-xl text-xs font-bold text-slate-800">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">New Monthly Base Fee (₹)</label>
+          <input type="number" step="100" name="monthly_base_fee" id="adjust-monthly-fee" required oninput="document.getElementById('adjust-annual-fee').value = this.value * 12" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-black text-slate-900 focus:ring-2 focus:ring-purple-500">
+          <p class="text-[10px] text-slate-400 mt-0.5">Use this to set custom concessions, scholarships, or daycare adjustments.</p>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Calculated Annual Fee (₹)</label>
+          <input type="number" step="100" name="annual_fee" id="adjust-annual-fee" readonly class="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-xl text-xs font-bold text-slate-700">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Adjustment Reason / Notes</label>
+          <input type="text" name="notes" placeholder="e.g. Sibling 10% concession approved by Director" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs">
+        </div>
+
+        <button type="submit" class="w-full py-2.5 bg-brand-purple hover:bg-purple-800 text-white font-bold rounded-xl text-xs shadow-md transition mt-2">
+          Save Fee Adjustment
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 2: RECORD PAYMENT, AUTO-DEDUCT & CARRY FORWARD / EXTRA CREDIT (USER MANDATE) -->
+  <div id="payment-split-modal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl p-6 max-w-lg w-full shadow-2xl border border-slate-200">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <h3 class="text-sm font-extrabold text-slate-900 flex items-center gap-2">
+          <i class="fa-solid fa-cash-register text-emerald-600"></i>
+          <span>Record Payment & Balance Splitting</span>
+        </h3>
+        <button onclick="document.getElementById('payment-split-modal').classList.add('hidden')" class="p-1 text-slate-400 hover:text-slate-600">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <form action="{{ url_for('admin_record_split_payment') }}" method="POST" data-loading-msg="Recording Payment & Calculating Balance..." class="mt-4 space-y-3.5">
+        <input type="hidden" name="invoice_id" id="split-invoice-id">
+        <input type="hidden" name="student_id" id="split-student-id">
+
+        <div class="p-3 bg-slate-50 rounded-2xl border border-slate-200">
+          <span class="text-[10px] uppercase font-bold text-slate-400">Student & Total Due</span>
+          <div class="flex items-center justify-between mt-0.5">
+            <h4 id="split-student-name" class="text-xs font-black text-slate-900">Aarav Mehta</h4>
+            <span id="split-total-due" class="text-sm font-black text-rose-700">₹18,000.00</span>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Amount Paid (₹)</label>
+          <input type="number" step="100" name="paid_amount" id="split-paid-amount" required oninput="calculateSplitDifference()" class="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-base font-black text-slate-900 focus:ring-2 focus:ring-emerald-500">
+        </div>
+
+        <!-- Dynamic Calculation Card -->
+        <div id="split-calc-card" class="p-3 bg-indigo-50 border border-indigo-200 rounded-xl text-xs space-y-1">
+          <p id="split-summary-text" class="font-bold text-indigo-900">
+            Enter amount above to preview auto-deduction.
+          </p>
+          <p id="split-subtext" class="text-[11px] text-indigo-700">
+            • Partial payments auto-create a pending balance invoice.<br>
+            • Extra payments auto-credit the student's advance wallet for next month!
+          </p>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Payment Method</label>
+          <select name="payment_method" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold">
+            <option value="UPI">UPI (GooglePay / PhonePe / Paytm)</option>
+            <option value="Cash">Cash (Front Desk Counter)</option>
+            <option value="Cheque">Bank Cheque</option>
+            <option value="NetBanking">NEFT / RTGS NetBanking</option>
+          </select>
+        </div>
+
+        <button type="submit" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow-md transition mt-2">
+          Confirm Payment & Print Receipt
+        </button>
+      </form>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  let currentModalDue = 0;
+
+  function filterFeeStudents() {
+    const q = document.getElementById('fees-table-search').value.toLowerCase();
+    document.querySelectorAll('.fee-student-row').forEach(row => {
+      const text = (row.getAttribute('data-name') || '').toLowerCase();
+      row.style.display = (!q || text.includes(q)) ? '' : 'none';
+    });
+  }
+
+  function openAdjustFeeModal(studentId, studentName, monthlyFee, annualFee) {
+    document.getElementById('adjust-student-id').value = studentId;
+    document.getElementById('adjust-student-name').value = studentName;
+    document.getElementById('adjust-monthly-fee').value = monthlyFee;
+    document.getElementById('adjust-annual-fee').value = annualFee || (monthlyFee * 12);
+    document.getElementById('adjust-fee-modal').classList.remove('hidden');
+  }
+
+  function openPaymentSplitModal(invoiceId, studentId, studentName, dueAmount) {
+    currentModalDue = parseFloat(dueAmount) || 0;
+    document.getElementById('split-invoice-id').value = invoiceId || '';
+    document.getElementById('split-student-id').value = studentId || '';
+    document.getElementById('split-student-name').innerText = studentName;
+    document.getElementById('split-total-due').innerText = '₹' + currentModalDue.toLocaleString('en-IN', {minimumFractionDigits: 2});
+    document.getElementById('split-paid-amount').value = currentModalDue > 0 ? currentModalDue : 5000;
+    calculateSplitDifference();
+    document.getElementById('payment-split-modal').classList.remove('hidden');
+  }
+
+  function calculateSplitDifference() {
+    const paid = parseFloat(document.getElementById('split-paid-amount').value) || 0;
+    const summary = document.getElementById('split-summary-text');
+    const sub = document.getElementById('split-subtext');
+
+    if (paid < currentModalDue) {
+      const remaining = currentModalDue - paid;
+      summary.innerHTML = `⚠️ Partial Payment: <span class="text-rose-700">₹${remaining.toLocaleString('en-IN')} remaining pending</span>`;
+      sub.innerHTML = `Auto-deducts ₹${paid.toLocaleString('en-IN')} from total. Creates a separate pending invoice of ₹${remaining.toLocaleString('en-IN')} to carry forward!`;
+    } else if (paid > currentModalDue) {
+      const extra = paid - currentModalDue;
+      summary.innerHTML = `🎉 Overpayment / Advance: <span class="text-emerald-700">+₹${extra.toLocaleString('en-IN')} extra paid</span>`;
+      sub.innerHTML = `Invoice settled in full! ₹${extra.toLocaleString('en-IN')} will be credited to student's advance wallet and deducted automatically from next month's invoice.`;
+    } else {
+      summary.innerHTML = `✓ Exact Payment: Fully settles current month due of ₹${paid.toLocaleString('en-IN')}.`;
+      sub.innerHTML = `Zero remaining balance. Clean ledger status.`;
+    }
+  }
+</script>
+{% endblock %}
