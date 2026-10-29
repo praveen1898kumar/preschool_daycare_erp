@@ -1,0 +1,394 @@
+{% extends "base.html" %}
+{% block page_title %}Zero-Cost Billing Engine & Family Ledger{% endblock %}
+
+{% block content %}
+<div class="space-y-4">
+
+  <!-- Financial Summary Strip -->
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+    <div class="p-3 bg-white rounded-2xl border border-slate-200/80 shadow-2xs">
+      <span class="text-[10px] font-bold text-slate-400 uppercase">Total Billed</span>
+      <p class="text-base sm:text-lg font-black text-slate-900 mt-0.5">₹{{ "{:,.0f}".format(total_billed) }}</p>
+    </div>
+    <div class="p-3 bg-emerald-50 border border-emerald-200 rounded-2xl shadow-2xs">
+      <span class="text-[10px] font-bold text-emerald-700 uppercase">Collected / Cleared</span>
+      <p class="text-base sm:text-lg font-black text-emerald-900 mt-0.5">₹{{ "{:,.0f}".format(total_collected) }}</p>
+    </div>
+    <div class="p-3 bg-amber-50 border border-amber-200 rounded-2xl shadow-2xs">
+      <span class="text-[10px] font-bold text-amber-700 uppercase">Pending Due</span>
+      <p class="text-base sm:text-lg font-black text-amber-900 mt-0.5">₹{{ "{:,.0f}".format(total_pending) }}</p>
+    </div>
+    <div class="p-3 bg-rose-50 border border-rose-200 rounded-2xl shadow-2xs">
+      <span class="text-[10px] font-bold text-rose-700 uppercase">Overdue Past Grace</span>
+      <p class="text-base sm:text-lg font-black text-rose-900 mt-0.5">₹{{ "{:,.0f}".format(total_overdue) }}</p>
+    </div>
+  </div>
+
+  <!-- PENDING PARENT PAYMENTS VERIFICATION QUEUE -->
+  {% if pending_approval_invoices %}
+  <div class="p-3.5 bg-amber-50 border-2 border-amber-300 rounded-2xl shadow-sm space-y-2.5">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <span class="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping"></span>
+        <h3 class="text-xs font-black uppercase tracking-wider text-amber-900">
+          Payment Proofs Uploaded by Parents • Awaiting School Verification
+        </h3>
+      </div>
+      <span class="px-2 py-0.5 bg-amber-200 text-amber-900 rounded-md text-[10px] font-bold">
+        {{ pending_approval_invoices|length }} Action Required
+      </span>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+      {% for inv in pending_approval_invoices %}
+      <div class="bg-white p-3 rounded-xl border border-amber-200 shadow-2xs flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-mono font-bold text-slate-800">{{ inv.invoice_number }}</span>
+            <span class="text-xs font-black text-emerald-700">₹{{ "{:,.0f}".format(inv.amount) }}</span>
+          </div>
+          <h4 class="text-xs font-bold text-slate-900 mt-1">
+            {{ inv.student_name }} <span class="text-[10px] font-mono text-purple-700 font-bold">({{ inv.roll_number or 'LM-KHD-004' }})</span>
+          </h4>
+          <p class="text-[11px] text-slate-500">Parent: {{ inv.parent_name }} • {{ inv.classroom_name }}</p>
+          
+          <div class="mt-1.5 p-1.5 bg-slate-50 rounded-lg text-[10px] text-slate-600 font-mono">
+            <strong>Ref:</strong> {{ inv.parent_txn_ref }} • {{ inv.parent_payment_date }}
+          </div>
+        </div>
+
+        <div class="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
+          <button type="button" onclick="openProofModal('{{ inv.parent_receipt_file }}', '{{ inv.parent_txn_ref }}', '{{ inv.student_name }}')" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[10px] font-bold transition">
+            <i class="fa-solid fa-image text-slate-500 mr-1"></i> View Proof
+          </button>
+
+          <div class="flex items-center gap-1.5">
+            <form action="{{ url_for('admin_approve_parent_payment', invoice_id=inv.id) }}" method="POST">
+              <button type="submit" data-loader="Approving Payment & Issuing Official Receipt..." class="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[10px] font-bold shadow-2xs transition">
+                ✓ Approve & Issue Receipt
+              </button>
+            </form>
+
+            <form action="{{ url_for('admin_reject_parent_payment', invoice_id=inv.id) }}" method="POST" onsubmit="return confirm('Are you sure you want to reject this payment proof?');">
+              <button type="submit" data-loader="Rejecting Proof..." class="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg text-[10px] font-bold transition">
+                ✕ Reject
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- LEDGER ACTION & FILTER CONTROLS (USER MANDATE) -->
+  <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs space-y-3">
+    
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div>
+        <h2 class="text-sm font-extrabold text-slate-900 flex items-center gap-2">
+          <i class="fa-solid fa-file-invoice-dollar text-emerald-600"></i>
+          <span>Tuition Invoices & Family Ledger</span>
+        </h2>
+        <p class="text-[11px] text-slate-500">Search and filter active campus family balances and invoices.</p>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2">
+        <!-- Export CSV Button -->
+        <a href="{{ url_for('export_billing_csv') }}" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-2xs">
+          <i class="fa-solid fa-file-csv text-emerald-600"></i>
+          <span>Export CSV</span>
+        </a>
+
+        <!-- Auto Generate Invoices Form -->
+        <form action="{{ url_for('admin_generate_invoices') }}" method="POST" data-loading-msg="Generating Campus Invoices..." class="flex items-center gap-1.5">
+          <select name="term_month" class="px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700">
+            <option value="November 2026">Nov 2026</option>
+            <option value="December 2026">Dec 2026</option>
+            <option value="January 2027">Jan 2027</option>
+            <option value="February 2027">Feb 2027</option>
+          </select>
+          <button type="submit" class="px-3 py-1.5 bg-brand-purple hover:bg-purple-800 text-white rounded-xl text-xs font-bold shadow-sm transition flex items-center gap-1.5">
+            <i class="fa-solid fa-wand-magic-sparkles"></i>
+            <span>Auto-Generate</span>
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- DYNAMIC FILTER BAR (USER MANDATE) -->
+    <div class="pt-3 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+      <!-- Search Input -->
+      <div class="relative">
+        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+          <i class="fa-solid fa-magnifying-glass text-xs"></i>
+        </span>
+        <input type="text" id="filter-search" oninput="applyLedgerFilters()" placeholder="Search name, roll no, invoice #..." class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-purple-500">
+      </div>
+
+      <!-- Status Filter -->
+      <div>
+        <select id="filter-status" onchange="applyLedgerFilters()" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700">
+          <option value="">All Statuses</option>
+          <option value="Paid">✓ Paid</option>
+          <option value="Pending Approval">Verification Pending</option>
+          <option value="Pending">Pending Due</option>
+          <option value="Overdue">Overdue</option>
+        </select>
+      </div>
+
+      <!-- Program / Classroom Filter -->
+      <div>
+        <select id="filter-class" onchange="applyLedgerFilters()" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700">
+          <option value="">All Classrooms</option>
+          <option value="Infant Care">Infant Care</option>
+          <option value="Toddler Nest">Toddler Nest</option>
+          <option value="Playgroup">Playgroup</option>
+          <option value="Pre-K / Kindergarten">Pre-K / Kindergarten</option>
+          <option value="After-School Daycare">After-School Daycare</option>
+        </select>
+      </div>
+
+      <!-- Term Month Filter -->
+      <div class="flex items-center gap-1.5">
+        <select id="filter-term" onchange="applyLedgerFilters()" class="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700">
+          <option value="">All Terms</option>
+          <option value="October 2026">October 2026</option>
+          <option value="November 2026">November 2026</option>
+          <option value="December 2026">December 2026</option>
+          <option value="September 2026">September 2026</option>
+        </select>
+
+        <button type="button" onclick="resetLedgerFilters()" class="p-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-bold transition" title="Reset Filters">
+          <i class="fa-solid fa-rotate-left"></i>
+        </button>
+      </div>
+    </div>
+
+    <div class="text-[11px] text-slate-500 flex items-center justify-between pt-1">
+      <span>Showing <strong id="visible-count">{{ invoices|length }}</strong> of {{ invoices|length }} invoices</span>
+      <span class="text-[10px] text-purple-700 font-bold">Instant Dynamic Filter Engine</span>
+    </div>
+
+  </div>
+
+  <!-- Invoices Table -->
+  <div class="bg-white rounded-2xl border border-slate-200/80 shadow-2xs overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-xs" id="ledger-table">
+        <thead class="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase font-black tracking-wider text-[10px]">
+          <tr>
+            <th class="py-2.5 px-3">Invoice #</th>
+            <th class="py-2.5 px-3">Roll No & Student</th>
+            <th class="py-2.5 px-3">Parent / Contact</th>
+            <th class="py-2.5 px-3">Term</th>
+            <th class="py-2.5 px-3">Amount</th>
+            <th class="py-2.5 px-3">Status</th>
+            <th class="py-2.5 px-3">Receipt / Ref</th>
+            <th class="py-2.5 px-3 text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100 font-medium">
+          {% for inv in invoices %}
+          <tr class="ledger-row hover:bg-slate-50/70 transition"
+              data-search="{{ inv.invoice_number }} {{ inv.student_name }} {{ inv.roll_number or '' }} {{ inv.parent_name }} {{ inv.parent_phone }}"
+              data-status="{{ 'Pending Approval' if inv.approval_status == 'Pending Approval' else inv.status }}"
+              data-class="{{ inv.classroom_name }}"
+              data-term="{{ inv.term_month }}">
+            
+            <td class="py-2.5 px-3 font-mono font-bold text-slate-900">{{ inv.invoice_number }}</td>
+            <td class="py-2.5 px-3">
+              <span class="font-bold text-slate-900">{{ inv.student_name }}</span>
+              <!-- ROLL NUMBER DISPLAY (USER MANDATE) -->
+              <span class="text-purple-700 font-mono font-extrabold text-[10px] block">
+                Roll: {{ inv.roll_number or 'LM-KHD-001' }} • {{ inv.classroom_name }}
+              </span>
+            </td>
+            <td class="py-2.5 px-3">
+              <span class="text-slate-800">{{ inv.parent_name }}</span>
+              <span class="text-slate-400 block font-mono text-[10px]">{{ inv.parent_phone }}</span>
+            </td>
+            <td class="py-2.5 px-3 text-slate-600">{{ inv.term_month }}</td>
+            <td class="py-2.5 px-3 font-bold text-slate-900">₹{{ "{:,.0f}".format(inv.amount) }}</td>
+            <td class="py-2.5 px-3">
+              {% if inv.status == 'Paid' %}
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800">
+                Paid
+              </span>
+              {% elif inv.approval_status == 'Pending Approval' %}
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-800 animate-pulse border border-amber-300">
+                Verification Pending
+              </span>
+              {% elif inv.status == 'Pending' %}
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-slate-100 text-slate-700">
+                Pending Due
+              </span>
+              {% else %}
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-100 text-rose-800">
+                Overdue
+              </span>
+              {% endif %}
+            </td>
+            <td class="py-2.5 px-3">
+              {% if inv.status == 'Paid' %}
+              <span class="text-slate-700 font-semibold">{{ inv.payment_method }}</span>
+              <span class="text-slate-400 block text-[10px] font-mono">{{ inv.receipt_number }}</span>
+              {% elif inv.approval_status == 'Pending Approval' %}
+              <span class="text-amber-700 font-semibold text-[11px]">{{ inv.parent_txn_ref or 'UPI' }}</span>
+              <span class="text-slate-400 block text-[9px]">Proof Attached</span>
+              {% else %}
+              <span class="text-slate-400 italic">Unpaid</span>
+              {% endif %}
+            </td>
+            <td class="py-2.5 px-3 text-right space-x-1">
+              {% if inv.status == 'Paid' %}
+              <button type="button" onclick="viewReceipt('{{ inv.receipt_number }}', '{{ inv.paid_at[:10] if inv.paid_at else '' }}', '{{ inv.student_name }} (Roll: {{ inv.roll_number or 'LM-KHD-001' }})', '{{ inv.classroom_name }}', '{{ inv.parent_name }}', '{{ inv.term_month }}', '{{ inv.amount }}', '{{ inv.payment_method }}')" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg text-xs font-bold transition">
+                <i class="fa-solid fa-file-invoice text-emerald-600 mr-1"></i> View Receipt
+              </button>
+              {% elif inv.approval_status == 'Pending Approval' %}
+              <button type="button" onclick="openProofModal('{{ inv.parent_receipt_file }}', '{{ inv.parent_txn_ref }}', '{{ inv.student_name }}')" class="px-2.5 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-bold transition shadow-2xs">
+                Review Proof
+              </button>
+              {% else %}
+              <button type="button" onclick="openPaymentModal('{{ inv.id }}', '{{ inv.student_name }} (Roll: {{ inv.roll_number or 'LM-KHD-001' }})', '{{ inv.amount }}')" class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow-2xs transition">
+                Record Payment
+              </button>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Record Tuition Payment Modal (WITH ADJUSTABLE AMOUNT INPUT) -->
+  <div id="payment-modal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-slate-200 animate-fade-in">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <h3 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
+          <i class="fa-solid fa-cash-register text-emerald-600"></i>
+          <span>Record Tuition Payment</span>
+        </h3>
+        <button onclick="document.getElementById('payment-modal').classList.add('hidden')" class="p-1 text-slate-400 hover:text-slate-600">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <form action="{{ url_for('admin_log_payment') }}" method="POST" data-loading-msg="Reconciling Ledger & Generating Receipt..." class="mt-4 space-y-3">
+        <input type="hidden" name="invoice_id" id="modal-invoice-id">
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Student & Roll No</label>
+          <input type="text" id="modal-student-name" readonly class="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-xl text-xs font-bold text-slate-800">
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <label class="block text-xs font-bold text-slate-700">Tuition Fee Amount (₹)</label>
+            <span class="text-[10px] text-emerald-700 font-bold">✓ Fully Adjustable</span>
+          </div>
+          <input type="number" step="100" name="amount" id="modal-amount" required class="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-sm font-black text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+          <p class="text-[10px] text-slate-400 mt-0.5">Adjust this value if parent paid partial amount or received approved discount.</p>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Payment Method</label>
+          <select name="payment_method" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold">
+            <option value="UPI">UPI (GooglePay / PhonePe / Paytm)</option>
+            <option value="Cash">Cash (Front Desk Counter)</option>
+            <option value="Cheque">Bank Cheque</option>
+            <option value="NetBanking">NEFT / RTGS NetBanking</option>
+          </select>
+        </div>
+
+        <button type="submit" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow-md transition mt-2">
+          Save & Issue Instant Receipt
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Parent Uploaded Proof Viewer Modal -->
+  <div id="proof-modal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-slate-200 text-center">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <h3 class="text-sm font-extrabold text-slate-900">Parent Payment Proof Screenshot</h3>
+        <button onclick="document.getElementById('proof-modal').classList.add('hidden')" class="p-1 text-slate-400 hover:text-slate-600">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <div class="my-4 p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
+        <div class="w-20 h-20 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-3xl mx-auto shadow-inner">
+          <i class="fa-solid fa-receipt"></i>
+        </div>
+        <p id="proof-student-name" class="font-extrabold text-sm text-slate-900">Tara Iyer</p>
+        <p id="proof-txn-ref" class="text-xs font-mono font-bold text-slate-700 bg-white p-2 rounded-lg border">UPI Ref: TXN-9988221</p>
+        <p class="text-[11px] text-slate-500">Verified bank transfer screenshot submitted through Parent Portal.</p>
+      </div>
+
+      <button onclick="document.getElementById('proof-modal').classList.add('hidden')" class="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-xl text-xs transition">
+        Close Preview
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  function applyLedgerFilters() {
+    const search = document.getElementById('filter-search').value.toLowerCase();
+    const status = document.getElementById('filter-status').value;
+    const room = document.getElementById('filter-class').value;
+    const term = document.getElementById('filter-term').value;
+
+    const rows = document.querySelectorAll('.ledger-row');
+    let visible = 0;
+
+    rows.forEach(row => {
+      const rowSearch = (row.getAttribute('data-search') || '').toLowerCase();
+      const rowStatus = row.getAttribute('data-status') || '';
+      const rowClass = row.getAttribute('data-class') || '';
+      const rowTerm = row.getAttribute('data-term') || '';
+
+      const matchSearch = !search || rowSearch.includes(search);
+      const matchStatus = !status || rowStatus === status;
+      const matchClass = !room || rowClass === room;
+      const matchTerm = !term || rowTerm === term;
+
+      if (matchSearch && matchStatus && matchClass && matchTerm) {
+        row.style.display = '';
+        visible++;
+      } else {
+        row.style.display = 'none';
+      }
+    });
+
+    const countEl = document.getElementById('visible-count');
+    if (countEl) countEl.innerText = visible;
+  }
+
+  function resetLedgerFilters() {
+    document.getElementById('filter-search').value = '';
+    document.getElementById('filter-status').value = '';
+    document.getElementById('filter-class').value = '';
+    document.getElementById('filter-term').value = '';
+    applyLedgerFilters();
+  }
+
+  function openPaymentModal(invoiceId, studentName, amount) {
+    document.getElementById('modal-invoice-id').value = invoiceId;
+    document.getElementById('modal-student-name').value = studentName;
+    document.getElementById('modal-amount').value = parseFloat(amount) || 14500;
+    document.getElementById('payment-modal').classList.remove('hidden');
+  }
+
+  function openProofModal(fileRef, txnRef, studentName) {
+    document.getElementById('proof-student-name').innerText = studentName;
+    document.getElementById('proof-txn-ref').innerText = 'Reference: ' + (txnRef || 'UPI/2026/89410293');
+    document.getElementById('proof-modal').classList.remove('hidden');
+  }
+</script>
+{% endblock %}

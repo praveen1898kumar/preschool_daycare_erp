@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% block page_title %}Lesson Planning & Developmental Milestones{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+  <!-- Split-Screen View: Lesson Schedule on Left, Milestone Checklist on Right -->
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+    
+    <!-- Left 6 Cols: Weekly Lesson Calendar -->
+    <div class="lg:col-span-6 bg-white rounded-3xl border border-slate-200/80 shadow-sm p-6 space-y-4">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div>
+          <h3 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
+            <i class="fa-solid fa-calendar-week text-brand-blue"></i>
+            <span>Weekly Early-Childhood Curriculum</span>
+          </h3>
+          <p class="text-xs text-slate-500">Montessori & Play-Way theme calendar for Kharadi branch</p>
+        </div>
+        <span class="px-2.5 py-1 bg-sky-100 text-sky-800 rounded-lg text-xs font-bold">Theme: Wonders of Nature</span>
+      </div>
+
+      <div class="space-y-3">
+        <!-- Monday -->
+        <div class="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/70">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-black text-brand-blue uppercase">Monday • Sensory Exploration</span>
+            <span class="text-[10px] font-bold text-slate-400">09:30 AM</span>
+          </div>
+          <h4 class="text-xs font-extrabold text-slate-900 mt-1">Leaf & Water Texture Discovery</h4>
+          <p class="text-[11px] text-slate-600 mt-0.5">Tactile exploration using freshly gathered garden leaves and gentle water pouring cups.</p>
+        </div>
+
+        <!-- Tuesday -->
+        <div class="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/70">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-black text-brand-blue uppercase">Tuesday • Fine Motor & Art</span>
+            <span class="text-[10px] font-bold text-slate-400">10:00 AM</span>
+          </div>
+          <h4 class="text-xs font-extrabold text-slate-900 mt-1">Finger Painting Green Frogs</h4>
+          <p class="text-[11px] text-slate-600 mt-0.5">Primary color blending (yellow + blue = green) using non-toxic washable finger paints.</p>
+        </div>
+
+        <!-- Wednesday -->
+        <div class="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/70">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-black text-brand-blue uppercase">Wednesday • Music & Movement</span>
+            <span class="text-[10px] font-bold text-slate-400">11:15 AM</span>
+          </div>
+          <h4 class="text-xs font-extrabold text-slate-900 mt-1">Rhythm Sticks & Animal Walks</h4>
+          <p class="text-[11px] text-slate-600 mt-0.5">Waddling like ducks and leaping like frogs with wooden rhythm instruments.</p>
+        </div>
+
+        <!-- Thursday -->
+        <div class="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/70">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-black text-brand-blue uppercase">Thursday • Cognitive Counting</span>
+            <span class="text-[10px] font-bold text-slate-400">10:15 AM</span>
+          </div>
+          <h4 class="text-xs font-extrabold text-slate-900 mt-1">Counting Bears Sorting by Color</h4>
+          <p class="text-[11px] text-slate-600 mt-0.5">One-to-one correspondence counting up to 10 with colored sorting bowls.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right 6 Cols: Developmental Milestone Checklist -->
+    <div class="lg:col-span-6 bg-white rounded-3xl border border-slate-200/80 shadow-sm p-6 space-y-4">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div>
+          <h3 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
+            <i class="fa-solid fa-list-check text-emerald-600"></i>
+            <span>Developmental Domains & Milestones</span>
+          </h3>
+          <p class="text-xs text-slate-500">Track and award digital achievement badges to children</p>
+        </div>
+      </div>
+
+      <div class="space-y-4">
+        
+        <!-- Cognitive Domain -->
+        <div class="p-4 bg-purple-50/50 rounded-2xl border border-purple-200">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-black text-purple-900 uppercase">Cognitive & Language</span>
+            <span class="text-[10px] font-bold text-purple-700">Domain 1</span>
+          </div>
+          <ul class="text-xs space-y-2 text-slate-700">
+            <li class="flex items-center gap-2">
+              <i class="fa-solid fa-circle-check text-emerald-600 text-sm"></i>
+              <span>Recognizes and names 5 common animal sounds</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <i class="fa-solid fa-circle-check text-emerald-600 text-sm"></i>
+              <span>Sorts items by primary color (Red, Blue, Yellow)</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <i class="fa-solid fa-clock text-amber-500 text-sm"></i>
+              <span>Counts independently up to 20 without repetition</span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Fine & Gross Motor Domain -->
+        <div class="p-4 bg-sky-50/50 rounded-2xl border border-sky-200">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-black text-sky-900 uppercase">Motor Skills (Fine & Gross)</span>
+            <span class="text-[10px] font-bold text-sky-700">Domain 2</span>
+          </div>
+          <ul class="text-xs space-y-2 text-slate-700">
+            <li class="flex items-center gap-2">
+              <i class="fa-solid fa-circle-check text-emerald-600 text-sm"></i>
+              <span>Stacks 8 or more wooden blocks without falling</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <i class="fa-solid fa-circle-check text-emerald-600 text-sm"></i>
+              <span>Holds child-safe scissors and snips along lines</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <i class="fa-solid fa-clock text-amber-500 text-sm"></i>
+              <span>Hops on one foot forward for 3 steps</span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Social-Emotional Domain -->
+        <div class="p-4 bg-amber-50/50 rounded-2xl border border-amber-200">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-black text-amber-900 uppercase">Social-Emotional & Self-Care</span>
+            <span class="text-[10px] font-bold text-amber-700">Domain 3</span>
+          </div>
+          <ul class="text-xs space-y-2 text-slate-700">
+            <li class="flex items-center gap-2">
+              <i class="fa-solid fa-circle-check text-emerald-600 text-sm"></i>
+              <span>Shares crayons and takes turns during group play</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <i class="fa-solid fa-circle-check text-emerald-600 text-sm"></i>
+              <span>Washes and dries hands with minimal assistance</span>
+            </li>
+          </ul>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}

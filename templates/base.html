@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full w-full overflow-hidden bg-slate-100">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>{% block title %}Little Millennium - Nest Daycare (Kharadi Branch){% endblock %}</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              purple: '#7B2CBF',
+              blue: '#0284C7',
+              teal: '#0D9488',
+              yellow: '#F59E0B',
+              pink: '#E11D48',
+              orange: '#EA580C'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  
+  <!-- FontAwesome / Icons CDN -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <!-- Chart.js for Admin Analytics -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Custom Stylesheet -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/custom.css') }}">
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/logo.png') }}">
+</head>
+<body class="w-screen h-screen max-h-screen overflow-hidden text-slate-800 antialiased bg-slate-100 select-none m-0 p-0">
+
+  <!-- ========================================================================= -->
+  <!-- CENTRAL BRANDED PROCESSING LOADER BOX (MANDATORY REQUIREMENT)            -->
+  <!-- ========================================================================= -->
+  <div id="central-processing-loader" role="dialog" aria-modal="true">
+    <div class="loader-card">
+      <div class="logo-container">
+        <div class="spinner-pulse-bg"></div>
+        <div class="spinner-ring"></div>
+        <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Little Millennium Nest Daycare" class="loader-logo-img">
+      </div>
+      <h3 id="loader-message" class="text-base font-bold text-slate-900 leading-snug">Processing request...</h3>
+      <p id="loader-subtext" class="text-xs text-slate-500 mt-1 font-medium">Little Millennium Kharadi Engine</p>
+      <div class="loader-progress-bar">
+        <div class="loader-progress-fill"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile Sidebar Backdrop -->
+  <div id="sidebar-backdrop" class="fixed inset-0 z-40 bg-slate-900/60 backdrop-blur-sm hidden md:hidden"></div>
+
+  <!-- Toast Container -->
+  <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none"></div>
+
+  <!-- ROOT FULL-VIEWPORT FLEX CONTAINER -->
+  <div class="w-full h-full max-h-screen overflow-hidden flex flex-col md:flex-row">
+
+    <!-- ========================================================================= -->
+    <!-- FULL HEIGHT EDGE-TO-EDGE SIDEBAR                                         -->
+    <!-- ========================================================================= -->
+    {% if current_user %}
+    <aside id="main-sidebar" class="fixed inset-y-0 left-0 z-50 w-64 md:w-72 bg-white border-r border-slate-200 flex flex-col shadow-xl md:shadow-none transition-transform duration-300 transform -translate-x-full md:translate-x-0 md:static h-full shrink-0">
+      
+      <!-- Brand Header in Sidebar (Locked to Top) -->
+      <div class="p-3 border-b border-slate-100 flex flex-col items-center justify-center bg-white shrink-0">
+        <a href="/" data-loader="Loading Dashboard..." class="flex flex-col items-center group">
+          <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Little Millennium Kharadi" class="h-14 w-auto object-contain transition-transform group-hover:scale-105">
+        </a>
+        
+        <!-- Campus Indicator -->
+        <div class="mt-2 px-3 py-0.5 bg-amber-50 border border-amber-200 text-amber-800 rounded-full text-[11px] font-semibold flex items-center gap-1.5 shadow-2xs">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+          <span>Kharadi Campus (Flagship)</span>
+        </div>
+      </div>
+
+      <!-- User Profile Pill in Sidebar -->
+      <div class="px-3 py-2 mx-2.5 my-2 bg-slate-50 rounded-xl border border-slate-200 flex items-center gap-2.5 shrink-0">
+        <img src="{{ current_user.avatar or 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150' }}" alt="{{ current_user.name }}" class="w-8 h-8 rounded-full object-cover border-2 border-brand-purple">
+        <div class="min-w-0 flex-1">
+          <p class="text-xs font-bold text-slate-900 truncate leading-tight">{{ current_user.name }}</p>
+          <span class="inline-block px-1.5 py-0.2 text-[9px] uppercase tracking-wider font-extrabold rounded-md 
+            {% if current_user.role in ['admin', 'director'] %}bg-purple-100 text-purple-700
+            {% elif current_user.role == 'teacher' %}bg-sky-100 text-sky-700
+            {% elif current_user.role == 'parent' %}bg-emerald-100 text-emerald-700
+            {% else %}bg-amber-100 text-amber-700{% endif %}">
+            {{ current_user.role }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Navigation Menu (Internal Scrollable) -->
+      <nav class="flex-1 overflow-y-auto px-2.5 py-1 space-y-1">
+        
+        {% if current_user.role in ['admin', 'director'] %}
+        <!-- ADMIN / DIRECTOR NAVIGATION -->
+        <div class="px-3 pt-1 pb-1 text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Executive Overview</div>
+        <a href="{{ url_for('admin_dashboard') }}" data-loader="Loading Executive Command Center..." class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition {% if active_page == 'admin_dashboard' %}bg-brand-purple text-white shadow-sm{% else %}text-slate-600 hover:bg-slate-100{% endif %}">
+          <i class="fa-solid fa-gauge-high w-4 text-center"></i>
+          <span>Command Center</span>
+        </a>
+        <a href="{{ url_for('admin_ratios') }}" data-loader="Calculating Live Room Ratios..." class="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition {% if active_page == 'admin_ratios' %}bg-brand-purple text-white shadow-sm{% else %}text-slate-600 hover:bg-slate-100{% endif %}">
+          <div class="flex items-center gap-2.5">
+            <i class="fa-solid fa-users-viewfinder w-4 text-center"></i>
+            <span>Live Room Ratios</span>
+          </div>
+          <span class="px-1.5 py-0.2 text-[9px] bg-emerald-500 text-white rounded-full font-bold">Live</span>
+        </a>
+        <a href="{{ url_for('admin_crm') }}" data-loader="Loading Inquiry & Tour Kanban..." class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition {% if active_page == 'admin_crm' %}bg-brand-purple text-white shadow-sm{% else %}text-slate-600 hover:bg-slate-100{% endif %}">
+          <i class="fa-solid fa-bullhorn w-4 text-center"></i>
+          <span>CRM Tours & Leads</span>
+        </a>
+        <a href="{{ url_for('admin_messages') }}" data-loader="Opening Family Communications Hub..." class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition {% if active_page == 'admin_messages' %}bg-brand-purple text-white shadow-sm{% else %}text-slate-600 hover:bg-slate-100{% endif %}">
+          <i class="fa-solid fa-comments w-4 text-center"></i>
+          <span>Family Messages</span>
+        </a>
+
+        <div class="px-3 pt-3 pb-1 text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Back-Office ERP</div>
+        <a href="{{ url_for('admin_billing') }}" data-loader="Loading Tuition & Ledger..." class="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition {% if active_page == 'admin_billing' %}bg-brand-purple text-white shadow-sm{% else %}text-slate-600 hover:bg-slate-100{% endif %}">
+          <div class="flex items-center gap-2.5">
+            <i class="fa-solid fa-file-invoice-dollar w-4 text-center"></i>
+            <span>Tuition & Ledger</span>
+          </div>
+          {% if pending_approvals_count and pending_approvals_count > 0 %}
+          <span class="px-1.5 py-0.2 text-[9px] bg-amber-500 text-white rounded-full font-bold animate-pulse">{{ pending_approvals_count }} Needs Verification</span>
+          {% endif %}
+        </a>
+        <a href="{{ url_for('admin_staff') }}" data-loader="Checking Staff Credentials..." class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition {% if active_page == 'admin_staff' %}bg-brand-purple text-white shadow-sm{% else %}text-slate-600 hover:bg-slate-100{% endif %}">
+          <i class="fa-solid fa-id-card-clip w-4 text-center"></i>
+          <span>Staff Time & Creds</span>
+        </a>
+        <a href="{{ url_for('admin_inventory') }}" data-loader="Fetching Supply Thresholds..." class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition {% if active_page == 'admin_inventory' %}bg-brand-purple text-white shadow-sm{% else %}text-slate-600 hover:bg-slate-100{% endif %}">
+          <i class="fa-solid fa-boxes-stacked w-4 text-center"></i>
+          <span>Supply Requisitions</span>
+        </a>
+        <a href="{{ url_for('admin_meals') }}" data-loader="Loading CACFP Menus..." class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition {% if active_page == 'admin_meals' %}bg-brand-purple text-white shadow-sm{% else %}text-slate-600 hover:bg-slate-100{% endif %}">
+          <i class="fa-solid fa-utensils w-4 text-center"></i>
+          <span>Nutritional Menus</span>
+        </a>
+
+        {% elif current_user.role == 'teacher' %}
+        <!-- TEACHER NAVIGATION -->
+        <div class="px-3 pt-1 pb-1 text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Classroom Engine</div>
+        <a href="{{ url_for('teacher_classroom') }}" data-loader="Loading Classroom Roster..." class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition {% if active_page == 'teacher_classroom' %}bg-brand-blue text-white shadow-sm{% else %}text-slate-600 hover:bg-slate-100{% endif %}">
+          <i class="fa-solid fa-children w-4 text-center"></i>
+          <span>Class Roster & Attendance</span>
+        </a>
+        <a href="{{ url_for('teacher_daily_sheets') }}" data-loader="Opening Bulk Daily Sheet..." class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition {% if active_page == 'teacher_daily_sheets' %}bg-brand-blue text-white shadow-sm{% else %}text-slate-600 hover:bg-slate-100{% endif %}">
+          <i class="fa-solid fa-clipboard-check w-4 text-center"></i>
+          <span>Daily Sheets (Bulk Log)</span>
+        </a>
+        <a href="{{ url_for('teacher_lessons') }}" data-loader="Loading Milestones & Lesson Plan..." class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition {% if active_page == 'teacher_lessons' %}bg-brand-blue text-white shadow-sm{% else %}text-slate-600 hover:bg-slate-100{% endif %}">
+          <i class="fa-solid fa-shapes w-4 text-center"></i>
+          <span>Lessons & Milestones</span>
+        </a>
+        <a href="{{ url_for('teacher_supply_request') }}" data-loader="Loading Requisitions..." class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition {% if active_page == 'teacher_supply_request' %}bg-brand-blue text-white shadow-sm{% else %}text-slate-600 hover:bg-slate-100{% endif %}">
+          <i class="fa-solid fa-box-open w-4 text-center"></i>
+          <span>Request Supplies</span>
+        </a>
+
+        {% elif current_user.role == 'parent' %}
+        <!-- PARENT NAVIGATION -->
+        <div class="px-3 pt-1 pb-1 text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Family Hub</div>
+        <a href="{{ url_for('parent_feed') }}" data-loader="Loading Child's Live Feed..." class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition {% if active_page == 'parent_feed' %}bg-brand-teal text-white shadow-sm{% else %}text-slate-600 hover:bg-slate-100{% endif %}">
+          <i class="fa-solid fa-camera-retro w-4 text-center"></i>
+          <span>Live Feed & Memories</span>
+        </a>
+        <a href="{{ url_for('parent_enrollment') }}" data-loader="Opening Paperless Packet..." class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition {% if active_page == 'parent_enrollment' %}bg-brand-teal text-white shadow-sm{% else %}text-slate-600 hover:bg-slate-100{% endif %}">
+          <i class="fa-solid fa-file-signature w-4 text-center"></i>
+          <span>Paperless E-Sign Packet</span>
+        </a>
+        <a href="{{ url_for('parent_billing') }}" data-loader="Loading Invoices & Receipts..." class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition {% if active_page == 'parent_billing' %}bg-brand-teal text-white shadow-sm{% else %}text-slate-600 hover:bg-slate-100{% endif %}">
+          <i class="fa-solid fa-receipt w-4 text-center"></i>
+          <span>Tuition & Statements</span>
+        </a>
+        <a href="{{ url_for('parent_messages') }}" data-loader="Opening Secure Chat..." class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition {% if active_page == 'parent_messages' %}bg-brand-teal text-white shadow-sm{% else %}text-slate-600 hover:bg-slate-100{% endif %}">
+          <i class="fa-solid fa-comments w-4 text-center"></i>
+          <span>2-Way Teacher Chat</span>
+        </a>
+
+        {% elif current_user.role == 'student' %}
+        <!-- STUDENT NAVIGATION -->
+        <div class="px-3 pt-1 pb-1 text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">My Fun Learning</div>
+        <a href="{{ url_for('student_portfolio') }}" data-loader="Opening My Badges..." class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition {% if active_page == 'student_portfolio' %}bg-brand-yellow text-slate-900 shadow-sm{% else %}text-slate-600 hover:bg-slate-100{% endif %}">
+          <i class="fa-solid fa-award w-4 text-center text-sm"></i>
+          <span>My Badges & Trophies</span>
+        </a>
+        <a href="{{ url_for('student_bookshelf') }}" data-loader="Opening Reading Bookshelf..." class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition {% if active_page == 'student_bookshelf' %}bg-brand-yellow text-slate-900 shadow-sm{% else %}text-slate-600 hover:bg-slate-100{% endif %}">
+          <i class="fa-solid fa-book-bookmark w-4 text-center text-sm"></i>
+          <span>Reading Bookshelf</span>
+        </a>
+        {% endif %}
+
+      </nav>
+
+      <!-- Bottom Switcher / Logout (Locked to bottom) -->
+      <div class="p-2.5 border-t border-slate-100 bg-slate-50 space-y-1.5 shrink-0">
+        <a href="{{ url_for('auth_login') }}" data-loader="Switching Role Portal..." class="w-full flex items-center justify-center gap-2 px-2.5 py-1.5 bg-slate-200/80 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-bold transition">
+          <i class="fa-solid fa-arrow-right-arrow-left"></i>
+          <span>Switch Portal / Role</span>
+        </a>
+        
+        <a href="{{ url_for('auth_logout') }}" data-loader="Logging out securely..." class="w-full flex items-center justify-center gap-2 px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg text-xs font-bold transition">
+          <i class="fa-solid fa-arrow-right-from-bracket"></i>
+          <span>Sign Out</span>
+        </a>
+      </div>
+    </aside>
+    {% endif %}
+
+    <!-- ========================================================================= -->
+    <!-- MAIN VIEWPORT CONTAINER (LOCKED VIEWPORT - NEVER SCROLLS PAGE)           -->
+    <!-- ========================================================================= -->
+    <div class="flex-1 flex flex-col h-full overflow-hidden min-w-0">
+      
+      <!-- Top Fluid App Bar (Zero top margin, fixed height 56px) -->
+      <header class="h-14 flex-none bg-white border-b border-slate-200 px-4 md:px-6 flex items-center justify-between shadow-2xs z-30">
+        <div class="flex items-center gap-3">
+          {% if current_user %}
+          <button id="mobile-sidebar-toggle" type="button" class="md:hidden p-1.5 text-slate-600 hover:bg-slate-100 rounded-lg">
+            <i class="fa-solid fa-bars text-base"></i>
+          </button>
+          {% endif %}
+          
+          <div class="flex items-center gap-2">
+            <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Little Millennium Kharadi" class="h-8 w-auto md:hidden object-contain">
+            <div>
+              <h1 class="text-sm font-extrabold text-slate-900 tracking-tight flex items-center gap-2 leading-tight">
+                {% block page_title %}Dashboard{% endblock %}
+              </h1>
+              <p class="text-[10px] text-slate-500 hidden sm:block leading-none mt-0.5">Little Millennium & Nest Daycare • Kharadi Pune</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Live Ratios Ticker in Header -->
+        <div class="flex items-center gap-2.5">
+          <div class="hidden lg:flex items-center gap-2 px-3 py-1 bg-slate-100 border border-slate-200 rounded-full text-xs font-medium text-slate-600 shadow-inner">
+            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+            <span class="font-bold text-slate-700">Ratios:</span>
+            <span>Infant 1:3</span>
+            <span class="text-slate-300">|</span>
+            <span>Toddler 1:5</span>
+            <span class="text-slate-300">|</span>
+            <span>Pre-K 1:8</span>
+          </div>
+
+          <!-- Campus Indicator -->
+          <div class="flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-700">
+            <i class="fa-solid fa-location-dot text-rose-500 text-xs"></i>
+            <span class="hidden sm:inline">Kharadi Campus</span>
+          </div>
+
+          {% if current_user %}
+          <!-- User Badge -->
+          <a href="{{ url_for('auth_login') }}" title="Switch Role" class="flex items-center gap-2 p-1 pl-2 pr-2.5 bg-slate-100 hover:bg-slate-200 rounded-full transition">
+            <img src="{{ current_user.avatar or 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150' }}" alt="Profile" class="w-6 h-6 rounded-full object-cover">
+            <span class="text-xs font-bold text-slate-800 hidden sm:inline">{{ current_user.name.split(' ')[0] }}</span>
+          </a>
+          {% endif %}
+        </div>
+      </header>
+
+      <!-- Internal Scrolling Main Workspace (The ONLY region that scrolls vertically) -->
+      <main class="flex-1 overflow-y-auto p-4 md:p-6 pb-20 md:pb-6 bg-slate-100">
+        
+        <!-- Flash Alert Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+            <div class="mb-4 p-3.5 rounded-xl border flex items-center justify-between text-xs font-bold shadow-sm {% if category == 'error' %}bg-rose-50 border-rose-300 text-rose-800{% else %}bg-emerald-50 border-emerald-300 text-emerald-800{% endif %}">
+              <div class="flex items-center gap-2">
+                <i class="fa-solid {% if category == 'error' %}fa-circle-exclamation{% else %}fa-circle-check{% endif %} text-base"></i>
+                <span>{{ message }}</span>
+              </div>
+              <button onclick="this.parentElement.remove()" class="text-slate-400 hover:text-slate-700"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+      </main>
+
+      <!-- Mobile Bottom Navigation Bar -->
+      {% if current_user %}
+      <nav class="md:hidden flex-none bg-white border-t border-slate-200 shadow-xl flex items-center justify-around py-1.5 px-1 z-30">
+        {% if current_user.role in ['admin', 'director'] %}
+        <a href="{{ url_for('admin_dashboard') }}" data-loader="Loading Dashboard..." class="flex flex-col items-center py-1 px-3 text-xs font-semibold {% if active_page == 'admin_dashboard' %}text-brand-purple{% else %}text-slate-500{% endif %}">
+          <i class="fa-solid fa-gauge-high text-sm"></i>
+          <span class="text-[9px] mt-0.5">Overview</span>
+        </a>
+        <a href="{{ url_for('admin_ratios') }}" data-loader="Checking Ratios..." class="flex flex-col items-center py-1 px-3 text-xs font-semibold {% if active_page == 'admin_ratios' %}text-brand-purple{% else %}text-slate-500{% endif %}">
+          <i class="fa-solid fa-users-viewfinder text-sm"></i>
+          <span class="text-[9px] mt-0.5">Ratios</span>
+        </a>
+        <a href="{{ url_for('admin_crm') }}" data-loader="Opening Leads..." class="flex flex-col items-center py-1 px-3 text-xs font-semibold {% if active_page == 'admin_crm' %}text-brand-purple{% else %}text-slate-500{% endif %}">
+          <i class="fa-solid fa-bullhorn text-sm"></i>
+          <span class="text-[9px] mt-0.5">CRM</span>
+        </a>
+        <a href="{{ url_for('admin_billing') }}" data-loader="Opening Billing..." class="flex flex-col items-center py-1 px-3 text-xs font-semibold {% if active_page == 'admin_billing' %}text-brand-purple{% else %}text-slate-500{% endif %}">
+          <i class="fa-solid fa-file-invoice-dollar text-sm"></i>
+          <span class="text-[9px] mt-0.5">Billing</span>
+        </a>
+
+        {% elif current_user.role == 'teacher' %}
+        <a href="{{ url_for('teacher_classroom') }}" data-loader="Loading Roster..." class="flex flex-col items-center py-1 px-3 text-xs font-semibold {% if active_page == 'teacher_classroom' %}text-brand-blue{% else %}text-slate-500{% endif %}">
+          <i class="fa-solid fa-children text-sm"></i>
+          <span class="text-[9px] mt-0.5">Roster</span>
+        </a>
+        <a href="{{ url_for('teacher_daily_sheets') }}" data-loader="Opening Daily Sheets..." class="flex flex-col items-center py-1 px-3 text-xs font-semibold {% if active_page == 'teacher_daily_sheets' %}text-brand-blue{% else %}text-slate-500{% endif %}">
+          <i class="fa-solid fa-clipboard-check text-sm"></i>
+          <span class="text-[9px] mt-0.5">Bulk Log</span>
+        </a>
+        <a href="{{ url_for('teacher_lessons') }}" data-loader="Loading Milestones..." class="flex flex-col items-center py-1 px-3 text-xs font-semibold {% if active_page == 'teacher_lessons' %}text-brand-blue{% else %}text-slate-500{% endif %}">
+          <i class="fa-solid fa-shapes text-sm"></i>
+          <span class="text-[9px] mt-0.5">Milestones</span>
+        </a>
+        <a href="{{ url_for('teacher_supply_request') }}" data-loader="Requesting Supplies..." class="flex flex-col items-center py-1 px-3 text-xs font-semibold {% if active_page == 'teacher_supply_request' %}text-brand-blue{% else %}text-slate-500{% endif %}">
+          <i class="fa-solid fa-box-open text-sm"></i>
+          <span class="text-[9px] mt-0.5">Supplies</span>
+        </a>
+
+        {% elif current_user.role == 'parent' %}
+        <a href="{{ url_for('parent_feed') }}" data-loader="Loading Child's Live Feed..." class="flex flex-col items-center py-1 px-3 text-xs font-semibold {% if active_page == 'parent_feed' %}text-brand-teal{% else %}text-slate-500{% endif %}">
+          <i class="fa-solid fa-camera-retro text-sm"></i>
+          <span class="text-[9px] mt-0.5">Feed</span>
+        </a>
+        <a href="{{ url_for('parent_enrollment') }}" data-loader="Opening Paperless Packet..." class="flex flex-col items-center py-1 px-3 text-xs font-semibold {% if active_page == 'parent_enrollment' %}text-brand-teal{% else %}text-slate-500{% endif %}">
+          <i class="fa-solid fa-file-signature text-sm"></i>
+          <span class="text-[9px] mt-0.5">E-Sign</span>
+        </a>
+        <a href="{{ url_for('parent_billing') }}" data-loader="Loading Statements..." class="flex flex-col items-center py-1 px-3 text-xs font-semibold {% if active_page == 'parent_billing' %}text-brand-teal{% else %}text-slate-500{% endif %}">
+          <i class="fa-solid fa-receipt text-sm"></i>
+          <span class="text-[9px] mt-0.5">Billing</span>
+        </a>
+        <a href="{{ url_for('parent_messages') }}" data-loader="Opening Chat..." class="flex flex-col items-center py-1 px-3 text-xs font-semibold {% if active_page == 'parent_messages' %}text-brand-teal{% else %}text-slate-500{% endif %}">
+          <i class="fa-solid fa-comments text-sm"></i>
+          <span class="text-[9px] mt-0.5">Chat</span>
+        </a>
+
+        {% elif current_user.role == 'student' %}
+        <a href="{{ url_for('student_portfolio') }}" data-loader="Loading Badges..." class="flex flex-col items-center py-1 px-5 text-xs font-semibold {% if active_page == 'student_portfolio' %}text-brand-yellow{% else %}text-slate-500{% endif %}">
+          <i class="fa-solid fa-award text-base"></i>
+          <span class="text-[9px] mt-0.5 font-bold">Badges</span>
+        </a>
+        <a href="{{ url_for('student_bookshelf') }}" data-loader="Loading Bookshelf..." class="flex flex-col items-center py-1 px-5 text-xs font-semibold {% if active_page == 'student_bookshelf' %}text-brand-yellow{% else %}text-slate-500{% endif %}">
+          <i class="fa-solid fa-book-bookmark text-base"></i>
+          <span class="text-[9px] mt-0.5 font-bold">Bookshelf</span>
+        </a>
+        {% endif %}
+
+        <a href="{{ url_for('auth_login') }}" data-loader="Switching Role..." class="flex flex-col items-center py-1 px-3 text-xs font-semibold text-slate-500">
+          <i class="fa-solid fa-arrow-right-arrow-left text-sm"></i>
+          <span class="text-[9px] mt-0.5">Switch</span>
+        </a>
+      </nav>
+      {% endif %}
+
+    </div>
+
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- OFFICIAL PRINTABLE FEE RECEIPT MODAL                                      -->
+  <!-- ========================================================================= -->
+  <div id="receipt-modal" class="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl p-6 md:p-8 max-w-xl w-full shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto">
+      
+      <div class="flex items-center justify-between pb-4 border-b border-slate-200 no-print">
+        <h3 class="text-sm font-extrabold text-slate-900 flex items-center gap-2">
+          <i class="fa-solid fa-receipt text-emerald-600"></i>
+          <span>Official Fee Receipt</span>
+        </h3>
+        <div class="flex items-center gap-2">
+          <button onclick="window.print()" class="px-3 py-1.5 bg-brand-purple hover:bg-purple-800 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm">
+            <i class="fa-solid fa-print"></i>
+            <span>Print Receipt</span>
+          </button>
+          <button onclick="document.getElementById('receipt-modal').classList.add('hidden')" class="p-1.5 text-slate-400 hover:text-slate-600">
+            <i class="fa-solid fa-xmark text-lg"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Printable Area -->
+      <div id="printable-receipt-modal" class="p-4 sm:p-6 bg-white border border-slate-200 rounded-2xl mt-3 space-y-4">
+        <!-- Letterhead -->
+        <div class="flex items-center justify-between border-b pb-4">
+          <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo" class="h-16 w-auto object-contain">
+          <div class="text-right text-[11px] text-slate-600">
+            <p class="font-bold text-slate-900">Little Millennium - Nest Daycare</p>
+            <p>Kharadi Campus, Near EON IT Park</p>
+            <p>Pune, MH 411014 • Ph: +91 98230 45678</p>
+            <p class="font-mono text-slate-400">Reg: MH-PUN-ECE-2024-8841</p>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between text-xs">
+          <div>
+            <span class="text-slate-400 uppercase font-black text-[9px]">Receipt Number</span>
+            <p id="receipt-no" class="font-mono font-bold text-slate-900 text-sm">REC-LM-4401</p>
+          </div>
+          <div class="text-right">
+            <span class="text-slate-400 uppercase font-black text-[9px]">Date of Issue</span>
+            <p id="receipt-date" class="font-medium text-slate-900">2026-10-29</p>
+          </div>
+        </div>
+
+        <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-1">
+          <p><strong class="text-slate-700">Student Name:</strong> <span id="receipt-student">Tara Iyer</span></p>
+          <p><strong class="text-slate-700">Program / Class:</strong> <span id="receipt-class">Toddler Nest</span></p>
+          <p><strong class="text-slate-700">Parent / Guardian:</strong> <span id="receipt-parent">Vikram Mehta</span></p>
+          <p><strong class="text-slate-700">Billing Term:</strong> <span id="receipt-term">October 2026</span></p>
+        </div>
+
+        <table class="w-full text-xs border-collapse">
+          <thead>
+            <tr class="border-b text-slate-500 uppercase text-[10px]">
+              <th class="py-2 text-left">Description</th>
+              <th class="py-2 text-right">Amount (₹)</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            <tr>
+              <td class="py-2">Tuition & Daycare Childcare Services</td>
+              <td id="receipt-amount" class="py-2 text-right font-bold text-slate-900">₹18,000.00</td>
+            </tr>
+            <tr>
+              <td class="py-2 text-slate-500">Meal Plan & Organic Nutrition (CACFP Compliant)</td>
+              <td class="py-2 text-right text-slate-500">Included</td>
+            </tr>
+            <tr class="border-t font-black text-sm">
+              <td class="py-2 text-slate-900">Total Amount Paid</td>
+              <td id="receipt-total" class="py-2 text-right text-emerald-700">₹18,000.00</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="pt-2 text-xs flex items-center justify-between border-t">
+          <div>
+            <span class="text-slate-400 text-[10px] uppercase font-bold">Payment Method</span>
+            <p id="receipt-method" class="font-bold text-slate-800">UPI / Zero-Fee Passthrough</p>
+          </div>
+          <div class="text-right">
+            <span class="inline-block px-3 py-1 bg-emerald-100 text-emerald-800 rounded-lg font-black text-xs">
+              ✓ PAYMENT VERIFIED & CLEARED
+            </span>
+          </div>
+        </div>
+
+        <div class="pt-4 text-center text-[10px] text-slate-400 italic">
+          This is a computer-generated digital receipt and requires no physical signature. Little Millennium Education Pvt Ltd.
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/canvas_signature.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/speech_to_text.js') }}"></script>
+  {% block extra_scripts %}{% endblock %}
+
+</body>
+</html>

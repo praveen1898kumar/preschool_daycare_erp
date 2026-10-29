@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block page_title %}Classroom Supply Requisitions{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+  <!-- Header Banner -->
+  <div class="p-6 bg-gradient-to-r from-sky-700 via-indigo-700 to-purple-800 rounded-3xl text-white shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+    <div>
+      <span class="px-2.5 py-1 bg-white/20 text-[10px] font-black uppercase tracking-wider rounded-lg border border-white/20">
+        Classroom Consumables
+      </span>
+      <h2 class="text-xl md:text-2xl font-black mt-1">Request Supplies Directly to Main Desk</h2>
+      <p class="text-xs text-sky-100 mt-1">
+        Never run out of essential diapers, wet wipes, sanitizers, or art materials in your classroom.
+      </p>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+    
+    <!-- Left 5 Cols: Quick Request Form -->
+    <div class="lg:col-span-5 bg-white rounded-3xl border border-slate-200/80 shadow-sm p-6 space-y-4">
+      <h3 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
+        <i class="fa-solid fa-box-open text-brand-blue"></i>
+        <span>New Supply Request</span>
+      </h3>
+
+      <form action="{{ url_for('teacher_submit_supply_request') }}" method="POST" data-loading-msg="Submitting Supply Requisition...">
+        <div class="space-y-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Item Required</label>
+            <select name="item_name" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold">
+              <option value="Huggies Sensitive Wet Wipes (80pk)">Huggies Sensitive Wet Wipes (80pk)</option>
+              <option value="Pampers Toddler Diapers (Size 4)">Pampers Toddler Diapers (Size 4)</option>
+              <option value="A4 Pastel Construction Paper">A4 Pastel Construction Paper</option>
+              <option value="Non-Toxic Crayola Finger Paints">Non-Toxic Crayola Finger Paints</option>
+              <option value="Sterillium Hand Sanitizer 500ml">Sterillium Hand Sanitizer 500ml</option>
+              <option value="Disposable Nitrile Gloves (Medium)">Disposable Nitrile Gloves (Medium)</option>
+              <option value="Waterproof Band-Aid Strips">Waterproof Band-Aid Strips</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Quantity</label>
+            <input type="number" name="quantity" required min="1" value="2" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800">
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Urgency Level</label>
+            <select name="urgency" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold">
+              <option value="Normal">Normal (Next Day Restock)</option>
+              <option value="High">High (Needed Before Lunch)</option>
+              <option value="Urgent">Urgent (Immediate Classroom Need)</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Teacher Notes</label>
+            <textarea name="notes" rows="2" placeholder="e.g. Diapers running low after morning routine..." class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium"></textarea>
+          </div>
+
+          <button type="submit" class="w-full py-2.5 bg-brand-blue hover:bg-sky-700 text-white font-bold rounded-xl text-xs shadow-md transition mt-2">
+            Submit Requisition to Director
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Right 7 Cols: Submitted Requests History -->
+    <div class="lg:col-span-7 bg-white rounded-3xl border border-slate-200/80 shadow-sm p-6 space-y-4">
+      <h3 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
+        <i class="fa-solid fa-clock-rotate-left text-slate-400"></i>
+        <span>My Requisition History</span>
+      </h3>
+
+      <div class="space-y-3">
+        {% for req in my_requests %}
+        <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200/70 flex items-center justify-between text-xs">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="px-2 py-0.5 rounded-md text-[10px] font-black {% if req.urgency == 'Urgent' %}bg-rose-100 text-rose-700{% else %}bg-slate-200 text-slate-700{% endif %}">
+                {{ req.urgency }}
+              </span>
+              <span class="font-extrabold text-slate-900 text-sm">{{ req.item_name }} (Qty: {{ req.quantity }})</span>
+            </div>
+            <p class="text-[11px] text-slate-500 mt-1">Submitted on {{ req.created_at[:10] }} • {{ req.notes }}</p>
+          </div>
+
+          <span class="px-3 py-1 rounded-full text-xs font-black {% if req.status == 'Pending' %}bg-amber-100 text-amber-800{% elif req.status == 'Approved' %}bg-indigo-100 text-indigo-800{% else %}bg-emerald-100 text-emerald-800{% endif %}">
+            {{ req.status }}
+          </span>
+        </div>
+        {% else %}
+        <p class="text-xs text-slate-400 py-8 text-center italic">No past requisitions logged.</p>
+        {% endfor %}
+      </div>
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}

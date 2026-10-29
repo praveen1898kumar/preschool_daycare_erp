@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block page_title %}Family Communications Hub • Parent & Teacher Oversight{% endblock %}
+
+{% block content %}
+<div class="space-y-5">
+
+  <!-- Header Banner -->
+  <div class="p-5 bg-gradient-to-r from-purple-800 via-indigo-800 to-sky-700 rounded-3xl text-white shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+    <div>
+      <span class="px-2.5 py-0.5 bg-white/20 text-[10px] font-black uppercase tracking-wider rounded-lg border border-white/20">
+        Director Oversight
+      </span>
+      <h2 class="text-lg md:text-xl font-black mt-1">Unified Family & Teacher Communications</h2>
+      <p class="text-xs text-indigo-100 mt-0.5">
+        All messages sent by parents to classroom teachers are mirrored to the Center Director for full transparency.
+      </p>
+    </div>
+
+    <div class="px-3 py-1.5 bg-white/10 backdrop-blur-md rounded-xl text-xs font-bold border border-white/20 flex items-center gap-2">
+      <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+      <span>Director Oversight Active</span>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+    
+    <!-- Left 4 Cols: Active Family Conversations List -->
+    <div class="lg:col-span-4 bg-white rounded-3xl border border-slate-200/80 shadow-2xs p-4 flex flex-col h-[70vh]">
+      <h3 class="text-xs font-black uppercase tracking-wider text-slate-400 mb-3 px-1">
+        Family Chat Threads
+      </h3>
+
+      <div class="space-y-2 overflow-y-auto flex-1">
+        {% for thread in threads %}
+        <div class="p-3 rounded-2xl border border-purple-200 bg-purple-50/40 hover:bg-purple-50 transition cursor-pointer flex items-center gap-3">
+          <img src="{{ thread.student_photo or 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150' }}" alt="Student" class="w-10 h-10 rounded-xl object-cover border-2 border-brand-purple">
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center justify-between">
+              <h4 class="text-xs font-extrabold text-slate-900 truncate">{{ thread.student_name }}</h4>
+              <span class="text-[9px] font-bold text-brand-purple">{{ thread.roll_number }}</span>
+            </div>
+            <p class="text-[11px] text-slate-500 truncate">Parent: {{ thread.parent_name }}</p>
+            <p class="text-[10px] text-slate-400 truncate">Assigned: {{ thread.teacher_name }}</p>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Right 8 Cols: Conversation Feed & Director Reply Console -->
+    <div class="lg:col-span-8 bg-white rounded-3xl border border-slate-200/80 shadow-2xs overflow-hidden flex flex-col h-[70vh]">
+      
+      <!-- Thread Header -->
+      <div class="p-3.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-sm">
+            <i class="fa-solid fa-users"></i>
+          </div>
+          <div>
+            <h4 class="text-xs font-extrabold text-slate-900 leading-tight">
+              Aarav Mehta (Roll: LM-KHD-004) • Toddler Nest
+            </h4>
+            <p class="text-[10px] text-slate-500">
+              Participants: Vikram Mehta (Father), Ananya Deshmukh (Lead Teacher), Chanchal Sharma (Director)
+            </p>
+          </div>
+        </div>
+
+        <span class="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded-md">
+          Tri-Party Synchronized
+        </span>
+      </div>
+
+      <!-- Messages Stream -->
+      <div class="flex-1 p-4 overflow-y-auto space-y-3 bg-slate-50/30">
+        {% for msg in messages %}
+        <div class="flex flex-col {% if msg.sender_role == 'parent' %}items-start{% elif msg.sender_role == 'director' %}items-end{% else %}items-center{% endif %}">
+          
+          <div class="max-w-md p-3.5 rounded-2xl shadow-2xs text-xs {% if msg.sender_role == 'parent' %}bg-white border border-slate-200 text-slate-800 rounded-tl-none{% elif msg.sender_role == 'director' %}bg-brand-purple text-white rounded-tr-none{% else %}bg-sky-50 border border-sky-200 text-slate-800{% endif %}">
+            <div class="flex items-center justify-between gap-2 mb-1">
+              <span class="font-extrabold text-[10px] {% if msg.sender_role == 'director' %}text-purple-200{% else %}text-indigo-600{% endif %} uppercase tracking-wider">
+                {% if msg.sender_role == 'parent' %}Parent (Vikram Mehta)
+                {% elif msg.sender_role == 'director' %}Center Director (You)
+                {% else %}Teacher (Ananya Deshmukh){% endif %}
+              </span>
+              <span class="text-[9px] {% if msg.sender_role == 'director' %}text-purple-200{% else %}text-slate-400{% endif %} font-mono">{{ msg.sent_at }}</span>
+            </div>
+            
+            <p class="leading-relaxed">{{ msg.message_text }}</p>
+
+            {% if msg.translated_text %}
+            <div class="mt-2 pt-1.5 border-t {% if msg.sender_role == 'director' %}border-white/20 text-purple-200{% else %}border-slate-100 text-slate-500{% endif %} text-[10px] italic">
+              {{ msg.translated_text }}
+            </div>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- Director Message Input -->
+      <form action="{{ url_for('admin_send_message') }}" method="POST" data-loading-msg="Sending Director Response to Parent..." class="p-3 bg-white border-t border-slate-200 flex items-center gap-2">
+        <input type="hidden" name="receiver_id" value="8"> <!-- Vikram Mehta (Parent ID) -->
+        <input type="hidden" name="student_id" value="4">
+        
+        <input type="text" name="message_text" required placeholder="Reply as Center Director to parent and teacher..." class="flex-1 px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-purple-500">
+
+        <button type="submit" class="px-4 py-2.5 bg-brand-purple hover:bg-purple-800 text-white font-bold rounded-xl text-xs shadow-2xs transition flex items-center gap-1.5">
+          <i class="fa-solid fa-paper-plane"></i>
+          <span>Send as Director</span>
+        </button>
+      </form>
+
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}

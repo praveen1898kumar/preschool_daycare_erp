@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+{% block page_title %}Tuition Statements & Digital Invoices{% endblock %}
+
+{% block content %}
+<div class="space-y-5">
+
+  <!-- Billing Top Summary -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div class="bg-gradient-to-br from-teal-700 to-emerald-800 rounded-3xl p-5 text-white shadow-md flex flex-col justify-between">
+      <div>
+        <span class="text-xs uppercase font-bold text-teal-200">Current Outstanding Balance</span>
+        <h3 class="text-2xl sm:text-3xl font-black mt-1">
+          ₹{{ "{:,.0f}".format(pending_amount) }}
+        </h3>
+      </div>
+      <p class="text-xs text-teal-100 mt-3">
+        {% if pending_amount == 0 %}✓ Your family account is completely paid up!{% else %}Tuition due for current term.{% endif %}
+      </p>
+    </div>
+
+    <div class="bg-white rounded-3xl border border-slate-200/80 p-5 shadow-2xs flex flex-col justify-between">
+      <div>
+        <span class="text-xs uppercase font-bold text-slate-400">Total Paid This Year</span>
+        <h3 class="text-2xl sm:text-3xl font-black text-slate-900 mt-1">
+          ₹{{ "{:,.0f}".format(total_paid_amount) }}
+        </h3>
+      </div>
+      <!-- WORKING TAX STATEMENT EXPORT (USER MANDATE) -->
+      <a href="{{ url_for('export_parent_tax_statement', student_id=child.id) }}" class="w-full mt-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-xl text-xs transition flex items-center justify-center gap-1.5 shadow-2xs">
+        <i class="fa-solid fa-file-arrow-down text-rose-500"></i>
+        <span>Download Official Tax Certificate</span>
+      </a>
+    </div>
+
+    <div class="bg-white rounded-3xl border border-slate-200/80 p-5 shadow-2xs flex flex-col justify-between">
+      <div>
+        <span class="text-xs uppercase font-bold text-slate-400">School Fee Verification</span>
+        <h3 class="text-sm font-extrabold text-slate-900 mt-1">Zero Passthrough Surcharge</h3>
+      </div>
+      <p class="text-xs text-slate-500 mt-2">
+        Upload your UPI/bank transfer receipt screenshot below. Once approved by the school, your receipt is permanently stamped.
+      </p>
+    </div>
+  </div>
+
+  <!-- Invoices Table -->
+  <div class="bg-white rounded-3xl border border-slate-200/80 shadow-2xs p-5 space-y-4">
+    <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+      <div>
+        <h3 class="text-sm font-extrabold text-slate-900">Family Tuition Invoices & Statements</h3>
+        <p class="text-xs text-slate-500">Official digital receipts for {{ current_user.name }}</p>
+      </div>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-xs">
+        <thead class="bg-slate-50 text-slate-400 uppercase font-black tracking-wider text-[10px]">
+          <tr>
+            <th class="py-3 px-3.5">Invoice #</th>
+            <th class="py-3 px-3.5">Term</th>
+            <th class="py-3 px-3.5">Due Date</th>
+            <th class="py-3 px-3.5">Amount</th>
+            <th class="py-3 px-3.5">Status</th>
+            <th class="py-3 px-3.5">Verification / Receipt</th>
+            <th class="py-3 px-3.5 text-right">Action</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100 font-medium">
+          {% for inv in invoices %}
+          <tr>
+            <td class="py-3 px-3.5 font-mono font-bold text-slate-900">{{ inv.invoice_number }}</td>
+            <td class="py-3 px-3.5 text-slate-700 font-semibold">{{ inv.term_month }}</td>
+            <td class="py-3 px-3.5 text-slate-500">{{ inv.due_date }}</td>
+            <td class="py-3 px-3.5 font-black text-slate-900">₹{{ "{:,.0f}".format(inv.amount) }}</td>
+            <td class="py-3 px-3.5">
+              {% if inv.status == 'Paid' %}
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800">
+                ✓ Paid
+              </span>
+              {% elif inv.approval_status == 'Pending Approval' %}
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-800 border border-amber-300 animate-pulse">
+                Verification Pending
+              </span>
+              {% else %}
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-slate-100 text-slate-700">
+                Payment Due
+              </span>
+              {% endif %}
+            </td>
+            <td class="py-3 px-3.5">
+              {% if inv.status == 'Paid' %}
+              <span class="text-emerald-700 font-bold">{{ inv.receipt_number }}</span>
+              <span class="text-slate-400 block text-[10px]">{{ inv.payment_method }}</span>
+              {% elif inv.approval_status == 'Pending Approval' %}
+              <span class="text-amber-700 font-semibold text-[11px]">Screenshot Uploaded</span>
+              <span class="text-slate-400 block text-[9px] font-mono">Ref: {{ inv.parent_txn_ref }}</span>
+              {% else %}
+              <span class="text-slate-400 italic">Awaiting submission</span>
+              {% endif %}
+            </td>
+            <td class="py-3 px-3.5 text-right">
+              {% if inv.status == 'Paid' %}
+              <!-- Real Working View Receipt Modal (USER MANDATE) -->
+              <button type="button" onclick="viewReceipt('{{ inv.receipt_number }}', '{{ inv.paid_at[:10] if inv.paid_at else '' }}', '{{ child.first_name }} {{ child.last_name }}', '{{ classroom.name }}', '{{ current_user.name }}', '{{ inv.term_month }}', '{{ inv.amount }}', '{{ inv.payment_method }}')" class="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg text-xs font-bold transition shadow-2xs">
+                <i class="fa-solid fa-receipt text-emerald-600 mr-1"></i> View Receipt
+              </button>
+              {% elif inv.approval_status == 'Pending Approval' %}
+              <span class="text-[11px] font-bold text-amber-700 bg-amber-50 px-2 py-1 rounded-md border border-amber-200">
+                Awaiting School Approval
+              </span>
+              {% else %}
+              <!-- Parent Pay Modal Trigger -->
+              <button type="button" onclick="openParentPaymentModal('{{ inv.id }}', '{{ inv.invoice_number }}', '{{ inv.amount }}', '{{ inv.term_month }}')" class="px-3.5 py-1.5 bg-brand-teal hover:bg-teal-700 text-white rounded-xl text-xs font-bold shadow-sm transition">
+                Pay / Upload Proof
+              </button>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Parent Submit Payment & Upload Receipt Proof Modal (USER MANDATE) -->
+  <div id="parent-pay-modal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl p-6 max-w-lg w-full shadow-2xl border border-slate-200">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div>
+          <h3 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
+            <i class="fa-solid fa-qrcode text-brand-teal"></i>
+            <span>Tuition Payment & Proof Submission</span>
+          </h3>
+          <p class="text-[11px] text-slate-500">Little Millennium - Nest Daycare (Kharadi Branch)</p>
+        </div>
+        <button onclick="document.getElementById('parent-pay-modal').classList.add('hidden')" class="p-1 text-slate-400 hover:text-slate-600">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <form id="parent-pay-form" method="POST" enctype="multipart/form-data" data-loading-msg="Uploading Payment Proof & Submitting for Verification..." class="mt-4 space-y-3.5">
+        
+        <!-- School UPI Details Card -->
+        <div class="p-3.5 bg-teal-50 border border-teal-200 rounded-2xl flex items-center justify-between">
+          <div>
+            <span class="text-[10px] font-black uppercase text-teal-800">Direct School UPI VPA</span>
+            <p class="text-xs font-mono font-bold text-slate-900 mt-0.5">littlemillennium.kharadi@icici</p>
+            <p class="text-[10px] text-teal-700">Scan via GPay / PhonePe / Paytm / BHIM</p>
+          </div>
+          <div class="text-right">
+            <span class="text-[10px] uppercase font-bold text-slate-500">Amount Due</span>
+            <p id="modal-pay-amount" class="text-base font-black text-teal-900">₹14,500.00</p>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Select Payment Mode</label>
+          <select name="payment_method" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold">
+            <option value="UPI (GPay / PhonePe / Paytm)">UPI (GooglePay / PhonePe / Paytm / BHIM)</option>
+            <option value="NetBanking (NEFT / RTGS / IMPS)">NetBanking (NEFT / RTGS / IMPS)</option>
+            <option value="Debit / Credit Card">Debit / Credit Card</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Transaction Reference / UTR Number *</label>
+          <input type="text" name="txn_ref" required placeholder="e.g. 428910294812 (12-digit UPI Ref)" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-800">
+        </div>
+
+        <!-- UPLOAD PAYMENT RECEIPT SCREENSHOT (USER MANDATE) -->
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Upload Payment Screenshot / Receipt Proof *</label>
+          <input type="file" name="receipt_file" accept="image/*,.pdf" class="w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100 cursor-pointer">
+          <p class="text-[10px] text-slate-400 mt-1">Upload screenshot showing timestamp and bank transaction ID.</p>
+        </div>
+
+        <div class="p-3 bg-amber-50 rounded-xl border border-amber-200 text-[11px] text-amber-900 flex items-start gap-2">
+          <i class="fa-solid fa-circle-info text-amber-600 mt-0.5"></i>
+          <span>Once submitted, the school admin desk will verify the transfer and issue your stamped official fee receipt.</span>
+        </div>
+
+        <button type="submit" class="w-full py-2.5 bg-brand-teal hover:bg-teal-700 text-white font-bold rounded-xl text-xs shadow-md transition mt-1">
+          Submit Payment Proof for Verification
+        </button>
+      </form>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  function openParentPaymentModal(invoiceId, invoiceNum, amount, term) {
+    document.getElementById('parent-pay-form').action = '/parent/submit-payment/' + invoiceId;
+    document.getElementById('modal-pay-amount').innerText = '₹' + Number(amount).toLocaleString('en-IN', {minimumFractionDigits: 2});
+    document.getElementById('parent-pay-modal').classList.remove('hidden');
+  }
+</script>
+{% endblock %}

@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block page_title %}CACFP Food Program & Nutritional Kitchen Compliance{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+  <!-- Kitchen Portion Engine Banner -->
+  <div class="p-6 bg-gradient-to-r from-teal-800 via-emerald-800 to-indigo-900 rounded-3xl text-white shadow-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+    <div>
+      <span class="px-2.5 py-1 bg-white/20 text-[10px] font-black uppercase tracking-wider rounded-lg border border-white/20">
+        Automated Portion Sizing
+      </span>
+      <h2 class="text-xl md:text-2xl font-black mt-2">Attendance-Linked Kitchen Production</h2>
+      <p class="text-xs text-teal-100 mt-1">
+        Currently <strong>{{ present_count }} children</strong> checked in today across Kharadi. Meal portions calculated dynamically to minimize food waste.
+      </p>
+    </div>
+
+    <div class="bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/20 text-center">
+      <span class="text-3xl font-black text-amber-300">{{ present_count }}</span>
+      <span class="text-xs font-bold block text-teal-100 mt-0.5">Hot Portions Needed Today</span>
+    </div>
+  </div>
+
+  <!-- Allergen Safety Cross-Check Banner -->
+  <div class="p-4 bg-rose-50 border-2 border-rose-300 rounded-2xl flex items-center justify-between shadow-sm">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-rose-600 text-white flex items-center justify-center font-bold text-lg shrink-0">
+        <i class="fa-solid fa-utensils"></i>
+      </div>
+      <div>
+        <h4 class="text-xs font-black uppercase tracking-wider text-rose-900">Kitchen Allergen Cross-Check (Active Children Present)</h4>
+        <div class="flex flex-wrap gap-2 mt-1">
+          <span class="text-xs font-bold text-rose-800 bg-white px-2.5 py-1 rounded-lg border border-rose-200">
+            ⚠️ <strong>Aarav Mehta</strong> (Toddler): Severe Peanut Allergy (Nut-Free strictly)
+          </span>
+          <span class="text-xs font-bold text-rose-800 bg-white px-2.5 py-1 rounded-lg border border-rose-200">
+            ⚠️ <strong>Vihaan Gupta</strong> (Playgroup): Gluten Sensitivity (Gluten-Free roti)
+          </span>
+          <span class="text-xs font-bold text-rose-800 bg-white px-2.5 py-1 rounded-lg border border-rose-200">
+            ⚠️ <strong>Kabir Bose</strong> (Infant): Lactose / Cow Milk (Soy Formula only)
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Weekly Menu Calendar Cards -->
+  <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm p-6">
+    <div class="flex items-center justify-between mb-5">
+      <div>
+        <h3 class="text-base font-extrabold text-slate-900">Weekly Early Learning Nutritional Menu</h3>
+        <p class="text-xs text-slate-500">USDA / CACFP early childhood food component compliant.</p>
+      </div>
+      <button onclick="window.print()" class="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-2xs">
+        <i class="fa-solid fa-print text-teal-600"></i>
+        <span>Print CACFP Kitchen Report</span>
+      </button>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {% for meal in menus %}
+      <div class="p-4 rounded-2xl border border-slate-200 bg-slate-50/50 flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-purple-100 text-purple-800">
+              {{ meal.day_of_week }}
+            </span>
+            <span class="text-[10px] font-bold text-slate-500">{{ meal.calories }} kcal</span>
+          </div>
+
+          <h4 class="text-xs font-extrabold text-slate-900 mb-1 flex items-center gap-1.5">
+            <i class="fa-solid fa-cookie-bite text-amber-500"></i>
+            <span>{{ meal.meal_time }}</span>
+          </h4>
+
+          <p class="text-xs text-slate-700 font-medium leading-relaxed mt-2">
+            {{ meal.items_description }}
+          </p>
+        </div>
+
+        <div class="mt-4 pt-2.5 border-t border-slate-200 flex items-center justify-between text-[11px]">
+          <span class="text-slate-400 font-medium">Allergens:</span>
+          <span class="font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded">{{ meal.allergen_tags }}</span>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}

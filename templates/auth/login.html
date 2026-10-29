@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full w-full overflow-hidden bg-slate-900">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Login • Little Millennium & Nest Daycare (Kharadi Branch)</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              purple: '#7B2CBF',
+              blue: '#0284C7',
+              teal: '#0D9488',
+              yellow: '#F59E0B',
+              pink: '#E11D48',
+              orange: '#EA580C'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/custom.css') }}">
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/logo.png') }}">
+</head>
+<body class="w-screen h-screen max-h-screen overflow-hidden text-slate-800 antialiased bg-slate-100 select-none m-0 p-0 flex">
+
+  <!-- ========================================================================= -->
+  <!-- CENTRAL BRANDED PROCESSING LOADER BOX (MANDATORY REQUIREMENT)            -->
+  <!-- ========================================================================= -->
+  <div id="central-processing-loader" role="dialog" aria-modal="true">
+    <div class="loader-card">
+      <div class="logo-container">
+        <div class="spinner-pulse-bg"></div>
+        <div class="spinner-ring"></div>
+        <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Little Millennium Nest Daycare" class="loader-logo-img">
+      </div>
+      <h3 id="loader-message" class="text-base font-bold text-slate-900 leading-snug">Authenticating credentials...</h3>
+      <p id="loader-subtext" class="text-xs text-slate-500 mt-1 font-medium">Little Millennium Kharadi Engine</p>
+      <div class="loader-progress-bar">
+        <div class="loader-progress-fill"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FULL SCREEN SPLIT VIEW (100VW x 100VH, ZERO SCROLLING) -->
+  <div class="w-full h-full flex flex-col lg:flex-row overflow-hidden">
+    
+    <!-- Left Column: Little Millennium Kharadi Brand Presentation (Full Height) -->
+    <div class="hidden lg:flex lg:w-5/12 h-full bg-gradient-to-br from-purple-800 via-indigo-900 to-sky-800 p-8 xl:p-12 text-white flex-col justify-between relative overflow-hidden shrink-0">
+      <div class="absolute -right-20 -top-20 w-80 h-80 bg-white/10 rounded-full blur-3xl pointer-events-none"></div>
+      <div class="absolute -left-20 -bottom-20 w-80 h-80 bg-amber-400/20 rounded-full blur-3xl pointer-events-none"></div>
+
+      <!-- Brand Logo Card -->
+      <div class="relative z-10">
+        <div class="bg-white p-3.5 rounded-2xl shadow-xl inline-block mb-5">
+          <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Little Millennium Kharadi" class="h-16 w-auto object-contain">
+        </div>
+
+        <h2 class="text-2xl xl:text-3xl font-black tracking-tight leading-snug">
+          Enterprise Preschool & Daycare ERP & CRM
+        </h2>
+        <p class="mt-2 text-indigo-100 text-xs xl:text-sm leading-relaxed">
+          The First Big Step. Empowering educators with real-time room ratios, zero-cost paperless enrollment, touch daily sheets, and complete family transparency.
+        </p>
+      </div>
+
+      <!-- Feature Badges -->
+      <div class="relative z-10 space-y-2.5 my-4">
+        <div class="flex items-center gap-3 text-xs bg-white/10 backdrop-blur-md px-3.5 py-2 rounded-xl border border-white/15">
+          <i class="fa-solid fa-shield-heart text-emerald-400 text-sm"></i>
+          <div>
+            <p class="font-bold">Automated Ratio & Allergy Engine</p>
+            <p class="text-[10px] text-indigo-200">State-compliant live ratios & EpiPen lockdown</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3 text-xs bg-white/10 backdrop-blur-md px-3.5 py-2 rounded-xl border border-white/15">
+          <i class="fa-solid fa-pen-nib text-amber-300 text-sm"></i>
+          <div>
+            <p class="font-bold">100% Native Paperless Enrollment</p>
+            <p class="text-[10px] text-indigo-200">HTML5 Canvas digital signatures (Zero DocuSign fees)</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3 text-xs bg-white/10 backdrop-blur-md px-3.5 py-2 rounded-xl border border-white/15">
+          <i class="fa-solid fa-microphone text-sky-300 text-sm"></i>
+          <div>
+            <p class="font-bold">Hands-Free Teacher Voice Dictation</p>
+            <p class="text-[10px] text-indigo-200">Web Speech API bulk daily sheets & nap logs</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="relative z-10 pt-3 border-t border-white/15 flex items-center justify-between text-xs text-indigo-200">
+        <span>Kharadi Campus • Near EON IT Park</span>
+        <span class="font-mono text-[10px]">v2.6 Enterprise</span>
+      </div>
+    </div>
+
+    <!-- Right Column: Login & 1-Click Role Switcher (Full Height, Perfectly Sized) -->
+    <div class="flex-1 h-full bg-white flex flex-col justify-center px-6 sm:px-12 xl:px-20 overflow-y-auto">
+      
+      <div class="w-full max-w-md mx-auto my-auto py-6">
+        
+        <!-- Mobile Logo Header -->
+        <div class="lg:hidden text-center mb-6">
+          <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Little Millennium Kharadi" class="h-14 w-auto mx-auto object-contain">
+          <h2 class="text-base font-extrabold text-slate-900 mt-2">Kharadi Campus ERP & CRM</h2>
+        </div>
+
+        <div class="mb-5">
+          <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">Welcome to Portal</h2>
+          <p class="text-xs text-slate-500 mt-1">Select your role or enter credentials to access your workspace.</p>
+        </div>
+
+        <!-- Instant 1-Click Demo Login Panel (USER MANDATED) -->
+        <div class="mb-5 p-4 bg-slate-50 rounded-2xl border-2 border-indigo-100">
+          <div class="flex items-center justify-between mb-2.5">
+            <h3 class="text-[11px] font-black uppercase tracking-wider text-indigo-900 flex items-center gap-1.5">
+              <i class="fa-solid fa-bolt text-amber-500"></i>
+              <span>Instant 1-Click Demo Logins</span>
+            </h3>
+            <span class="text-[10px] font-bold text-slate-400">Tap Role to Enter</span>
+          </div>
+
+          <div class="grid grid-cols-4 gap-2">
+            <!-- 1-Click Director -->
+            <form action="{{ url_for('auth_quick_login') }}" method="POST">
+              <input type="hidden" name="role" value="director">
+              <button type="submit" data-loader="Logging in as Center Director..." class="w-full p-2 bg-white hover:bg-purple-50 border border-purple-200 hover:border-purple-400 rounded-xl flex flex-col items-center text-center transition group shadow-2xs">
+                <span class="w-7 h-7 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-xs mb-1 group-hover:scale-110 transition">
+                  <i class="fa-solid fa-user-tie"></i>
+                </span>
+                <span class="text-[11px] font-bold text-slate-900 leading-tight">Director</span>
+                <span class="text-[9px] text-purple-600 font-semibold truncate w-full">Chanchal S.</span>
+              </button>
+            </form>
+
+            <!-- 1-Click Teacher -->
+            <form action="{{ url_for('auth_quick_login') }}" method="POST">
+              <input type="hidden" name="role" value="teacher">
+              <button type="submit" data-loader="Logging in as Teacher..." class="w-full p-2 bg-white hover:bg-sky-50 border border-sky-200 hover:border-sky-400 rounded-xl flex flex-col items-center text-center transition group shadow-2xs">
+                <span class="w-7 h-7 rounded-full bg-sky-100 text-sky-700 flex items-center justify-center font-bold text-xs mb-1 group-hover:scale-110 transition">
+                  <i class="fa-solid fa-chalkboard-user"></i>
+                </span>
+                <span class="text-[11px] font-bold text-slate-900 leading-tight">Teacher</span>
+                <span class="text-[9px] text-sky-600 font-semibold truncate w-full">Ananya D.</span>
+              </button>
+            </form>
+
+            <!-- 1-Click Parent -->
+            <form action="{{ url_for('auth_quick_login') }}" method="POST">
+              <input type="hidden" name="role" value="parent">
+              <button type="submit" data-loader="Logging in as Parent..." class="w-full p-2 bg-white hover:bg-emerald-50 border border-emerald-200 hover:border-emerald-400 rounded-xl flex flex-col items-center text-center transition group shadow-2xs">
+                <span class="w-7 h-7 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-xs mb-1 group-hover:scale-110 transition">
+                  <i class="fa-solid fa-hands-holding-child"></i>
+                </span>
+                <span class="text-[11px] font-bold text-slate-900 leading-tight">Parent</span>
+                <span class="text-[9px] text-emerald-600 font-semibold truncate w-full">Vikram M.</span>
+              </button>
+            </form>
+
+            <!-- 1-Click Student -->
+            <form action="{{ url_for('auth_quick_login') }}" method="POST">
+              <input type="hidden" name="role" value="student">
+              <button type="submit" data-loader="Opening Fun Student Portfolio..." class="w-full p-2 bg-white hover:bg-amber-50 border border-amber-200 hover:border-amber-400 rounded-xl flex flex-col items-center text-center transition group shadow-2xs">
+                <span class="w-7 h-7 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-xs mb-1 group-hover:scale-110 transition">
+                  <i class="fa-solid fa-child-reaching"></i>
+                </span>
+                <span class="text-[11px] font-bold text-slate-900 leading-tight">Student</span>
+                <span class="text-[9px] text-amber-600 font-semibold truncate w-full">Aarav M.</span>
+              </button>
+            </form>
+          </div>
+        </div>
+
+        <div class="relative flex items-center justify-center my-4">
+          <div class="border-t border-slate-200 w-full"></div>
+          <span class="bg-white px-2.5 text-[10px] font-bold uppercase text-slate-400 absolute">or sign in with PIN</span>
+        </div>
+
+        {% if error %}
+        <div class="mb-3 p-3 bg-rose-50 border-l-4 border-rose-500 rounded-xl text-rose-800 text-xs font-semibold flex items-center gap-2">
+          <i class="fa-solid fa-circle-exclamation text-sm"></i>
+          <span>{{ error }}</span>
+        </div>
+        {% endif %}
+
+        <form action="{{ url_for('auth_login') }}" method="POST" data-loading-msg="Verifying Credentials & Campus Token...">
+          <div class="space-y-3">
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1">Email / Staff ID / Parent Mobile</label>
+              <div class="relative">
+                <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                  <i class="fa-solid fa-envelope text-xs"></i>
+                </span>
+                <input type="text" name="identifier" required placeholder="director@littlemillennium.com" class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+              </div>
+            </div>
+
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <label class="block text-xs font-bold text-slate-700">Security PIN / Password</label>
+                <span class="text-[10px] text-indigo-600 font-semibold">PIN: 1234</span>
+              </div>
+              <div class="relative">
+                <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                  <i class="fa-solid fa-lock text-xs"></i>
+                </span>
+                <input type="password" name="password" required placeholder="Enter password or 4-digit PIN" class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+              </div>
+            </div>
+
+            <button type="submit" class="w-full py-2.5 bg-gradient-to-r from-purple-700 to-indigo-600 hover:from-purple-800 hover:to-indigo-700 text-white font-bold rounded-xl shadow-md transition text-xs flex items-center justify-center gap-2 mt-2">
+              <i class="fa-solid fa-arrow-right-to-bracket"></i>
+              <span>Authenticate & Enter Workspace</span>
+            </button>
+          </div>
+        </form>
+
+        <p class="text-[10px] text-center text-slate-400 mt-5">
+          Little Millennium Kharadi Child Safeguarding & Privacy Compliant.
+        </p>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

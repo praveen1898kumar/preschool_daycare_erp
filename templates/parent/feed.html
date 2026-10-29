@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% block page_title %}Family Hub • Live Daily Feed & Memories{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+  <!-- Child Header Profile Card -->
+  <div class="bg-gradient-to-r from-teal-700 via-emerald-700 to-indigo-800 rounded-3xl p-6 text-white shadow-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
+    <div class="flex items-center gap-4">
+      <div class="relative">
+        <img src="{{ child.photo_url or 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150' }}" alt="{{ child.first_name }}" class="w-16 h-16 rounded-2xl object-cover border-2 border-white/50 shadow-md">
+        <span class="w-4 h-4 rounded-full bg-emerald-400 border-2 border-white absolute -bottom-1 -right-1"></span>
+      </div>
+
+      <div>
+        <div class="flex items-center gap-2">
+          <h2 class="text-xl md:text-2xl font-black">{{ child.first_name }} {{ child.last_name }}</h2>
+          <span class="px-2 py-0.5 bg-white/20 text-xs font-bold rounded-lg border border-white/20">{{ child.classroom_name }}</span>
+          <span class="px-2 py-0.5 bg-amber-400 text-slate-950 text-xs font-mono font-black rounded-lg shadow-2xs">Roll: {{ child.roll_number or 'LM-KHD-004' }}</span>
+        </div>
+        <p class="text-xs text-teal-100 mt-1">
+          Attendance: <span class="font-bold text-amber-300">Checked In ({{ check_in_time or '08:20 AM' }})</span> • Picked Up By: {{ current_user.name }}
+        </p>
+      </div>
+    </div>
+
+    <!-- Quick Emergency Contact / Allergy Pill -->
+    <div class="flex flex-wrap items-center gap-2">
+      {% if child.allergies and child.allergies != 'None' %}
+      <div class="px-3 py-1.5 bg-rose-500/80 backdrop-blur-md rounded-xl text-xs font-bold border border-rose-300/40 flex items-center gap-2 shadow-sm">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <span>Allergy: {{ child.allergies }}</span>
+      </div>
+      {% endif %}
+      
+      <div class="px-3 py-1.5 bg-white/10 backdrop-blur-md rounded-xl text-xs font-bold border border-white/20">
+        PIN: <span class="font-mono text-amber-300">{{ child.pickup_pin }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+    
+    <!-- Left 7 Cols: Instagram-Style Live Timeline Feed -->
+    <div class="lg:col-span-7 space-y-4">
+      <div class="flex items-center justify-between">
+        <h3 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
+          <i class="fa-solid fa-camera-retro text-brand-teal"></i>
+          <span>Today's Live Classroom Moments</span>
+        </h3>
+        <span class="text-xs text-slate-500">Auto-Refreshed via WebSocket</span>
+      </div>
+
+      <div class="space-y-4">
+        {% for act in child_activities %}
+        <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden hover:shadow-md transition">
+          <!-- Card Header -->
+          <div class="p-4 flex items-center justify-between border-b border-slate-100">
+            <div class="flex items-center gap-3">
+              <span class="w-10 h-10 rounded-xl bg-teal-50 text-teal-700 flex items-center justify-center text-base font-bold">
+                {% if act.activity_type == 'nap' %}<i class="fa-solid fa-moon"></i>
+                {% elif act.activity_type == 'meal' %}<i class="fa-solid fa-utensils"></i>
+                {% elif act.activity_type == 'potty' %}<i class="fa-solid fa-toilet-paper"></i>
+                {% else %}<i class="fa-solid fa-paint-brush"></i>{% endif %}
+              </span>
+              <div>
+                <h4 class="text-sm font-extrabold text-slate-900">{{ act.title }}</h4>
+                <p class="text-[11px] text-slate-500 font-medium">Logged by {{ act.teacher_name }}</p>
+              </div>
+            </div>
+            <span class="text-[11px] font-mono text-slate-400 font-bold bg-slate-50 px-2.5 py-1 rounded-lg">
+              {{ act.timestamp }}
+            </span>
+          </div>
+
+          <!-- Card Content / Story -->
+          <div class="p-5">
+            <p class="text-xs sm:text-sm text-slate-700 leading-relaxed">
+              {{ act.details }}
+            </p>
+
+            {% if act.activity_type == 'learning' %}
+            <div class="mt-4 rounded-2xl overflow-hidden border border-slate-100">
+              <img src="https://images.unsplash.com/photo-1503454537195-1dcabb73ffb9?w=600" alt="Classroom Moment" class="w-full h-56 object-cover">
+            </div>
+            {% endif %}
+          </div>
+
+          <!-- Card Footer Reaction Bar -->
+          <div class="px-5 py-3 bg-slate-50/60 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+            <button onclick="LittleMillennium.playChime('success'); this.classList.toggle('text-rose-600')" class="flex items-center gap-1.5 font-bold hover:text-rose-600 transition">
+              <i class="fa-solid fa-heart"></i>
+              <span>Love this update!</span>
+            </button>
+            <span class="text-[10px] text-slate-400">Little Millennium Kharadi Live Cloud</span>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Right 5 Cols: Health, Immunization & Pickups -->
+    <div class="lg:col-span-5 space-y-5">
+      
+      <!-- Immunization & Health Audit Card -->
+      <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm p-6 space-y-4">
+        <div class="flex items-center justify-between">
+          <h3 class="text-sm font-extrabold text-slate-900 flex items-center gap-2">
+            <i class="fa-solid fa-syringe text-emerald-600"></i>
+            <span>Immunization & Medical Records</span>
+          </h3>
+          <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+            Audit Compliant
+          </span>
+        </div>
+
+        <div class="space-y-2 text-xs">
+          <div class="p-3 bg-slate-50 rounded-xl border border-slate-200/70 flex items-center justify-between">
+            <div>
+              <p class="font-bold text-slate-800">MMR Vaccine (Booster)</p>
+              <p class="text-[10px] text-slate-400">Administered: Oct 2025</p>
+            </div>
+            <span class="text-emerald-600 font-black">✓ Verified</span>
+          </div>
+
+          <div class="p-3 bg-slate-50 rounded-xl border border-slate-200/70 flex items-center justify-between">
+            <div>
+              <p class="font-bold text-slate-800">Polio Oral & DTP</p>
+              <p class="text-[10px] text-slate-400">Administered: Jan 2026</p>
+            </div>
+            <span class="text-emerald-600 font-black">✓ Verified</span>
+          </div>
+
+          <div class="p-3 bg-slate-50 rounded-xl border border-slate-200/70 flex items-center justify-between">
+            <div>
+              <p class="font-bold text-slate-800">Blood Group</p>
+            </div>
+            <span class="font-mono font-bold text-slate-900 bg-white px-2 py-0.5 rounded border border-slate-200">{{ child.blood_group }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Authorized Pick-Up Individuals -->
+      <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm p-6 space-y-3">
+        <h3 class="text-sm font-extrabold text-slate-900 flex items-center gap-2">
+          <i class="fa-solid fa-user-shield text-brand-purple"></i>
+          <span>Authorized Pick-Up Guardians</span>
+        </h3>
+        <p class="text-xs text-slate-500">Only verified persons with security PIN are allowed gate entry.</p>
+
+        <div class="space-y-2 pt-1 text-xs">
+          <div class="p-3 bg-slate-50 rounded-xl border border-slate-200/70 flex items-center justify-between">
+            <div>
+              <p class="font-bold text-slate-800">{{ current_user.name }} (Father)</p>
+              <p class="text-[10px] text-slate-400 font-mono">{{ current_user.phone }}</p>
+            </div>
+            <span class="text-[10px] font-black bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded">Primary</span>
+          </div>
+
+          <div class="p-3 bg-slate-50 rounded-xl border border-slate-200/70 flex items-center justify-between">
+            <div>
+              <p class="font-bold text-slate-800">Sunita Mehta (Grandmother)</p>
+              <p class="text-[10px] text-slate-400 font-mono">+91 98230 99887</p>
+            </div>
+            <span class="text-[10px] font-black bg-slate-200 text-slate-700 px-2 py-0.5 rounded">Emergency</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}

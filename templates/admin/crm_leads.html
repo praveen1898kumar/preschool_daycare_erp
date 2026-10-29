@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+{% block page_title %}CRM Pipeline • Inquiries & Native Tour Scheduling{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+  <!-- Top Action Bar -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
+    <div>
+      <h2 class="text-lg font-extrabold text-slate-900 flex items-center gap-2">
+        <i class="fa-solid fa-bullhorn text-amber-500"></i>
+        <span>Omnichannel Leads & Tour Kanban</span>
+      </h2>
+      <p class="text-xs text-slate-500">Native pipeline tracking without paid Zapier or Calendly subscriptions.</p>
+    </div>
+
+    <div class="flex items-center gap-2.5">
+      <a href="{{ url_for('export_leads_csv') }}" class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-2xs">
+        <i class="fa-solid fa-file-csv text-amber-600"></i>
+        <span>Export Leads CSV</span>
+      </a>
+      <button onclick="document.getElementById('new-lead-modal').classList.remove('hidden')" class="px-4 py-2 bg-brand-purple hover:bg-purple-800 text-white rounded-xl text-xs font-bold shadow-md transition flex items-center gap-2">
+        <i class="fa-solid fa-plus"></i>
+        <span>+ New Lead Inquiry</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Kanban Columns Container (Horizontal Scroll for Responsive Full-Width) -->
+  <div class="flex gap-4 overflow-x-auto pb-4 items-start min-h-[600px]">
+    
+    {% set stages = [
+      ('New', 'New Inquiries', 'border-sky-300', 'bg-sky-50 text-sky-700', 'fa-inbox'),
+      ('Tour Scheduled', 'Tour Scheduled', 'border-amber-300', 'bg-amber-50 text-amber-700', 'fa-calendar-days'),
+      ('Tour Completed', 'Tour Completed', 'border-purple-300', 'bg-purple-50 text-purple-700', 'fa-circle-check'),
+      ('Application Submitted', 'App Submitted', 'border-indigo-300', 'bg-indigo-50 text-indigo-700', 'fa-file-lines'),
+      ('Enrolled', 'Enrolled & Active', 'border-emerald-300', 'bg-emerald-50 text-emerald-700', 'fa-graduation-cap')
+    ] %}
+
+    {% for stage_key, stage_title, border_color, badge_style, icon in stages %}
+    <div class="w-72 sm:w-80 shrink-0 bg-slate-100/80 rounded-2xl p-3.5 border border-slate-200/90 flex flex-col max-h-[750px]">
+      
+      <!-- Stage Header -->
+      <div class="flex items-center justify-between pb-3 mb-2 border-b border-slate-200">
+        <div class="flex items-center gap-2">
+          <span class="w-7 h-7 rounded-lg {{ badge_style }} flex items-center justify-center text-xs">
+            <i class="fa-solid {{ icon }}"></i>
+          </span>
+          <span class="text-xs font-extrabold text-slate-800">{{ stage_title }}</span>
+        </div>
+        <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-white border border-slate-200 text-slate-700">
+          {{ leads_by_stage[stage_key]|length }}
+        </span>
+      </div>
+
+      <!-- Lead Cards in Stage -->
+      <div class="overflow-y-auto space-y-3 flex-1 pr-1">
+        {% for lead in leads_by_stage[stage_key] %}
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition">
+          <div class="flex items-start justify-between">
+            <div>
+              <h4 class="text-sm font-extrabold text-slate-900 leading-snug">{{ lead.child_name }}</h4>
+              <p class="text-[11px] text-slate-500 font-medium">Age: {{ lead.child_age }} • {{ lead.requested_program }}</p>
+            </div>
+            <span class="px-2 py-0.5 text-[9px] font-bold rounded-md bg-slate-100 text-slate-600">
+              #{{ lead.id }}
+            </span>
+          </div>
+
+          <!-- Parent Contact Info -->
+          <div class="mt-2.5 pt-2 border-t border-slate-100 text-xs space-y-1">
+            <p class="text-slate-700 font-semibold flex items-center gap-1.5 truncate">
+              <i class="fa-solid fa-user text-slate-400 text-[10px]"></i>
+              <span>{{ lead.parent_name }}</span>
+            </p>
+            <p class="text-slate-600 flex items-center gap-1.5 font-mono text-[11px]">
+              <i class="fa-solid fa-phone text-slate-400 text-[10px]"></i>
+              <span>{{ lead.parent_phone }}</span>
+            </p>
+            {% if lead.tour_date %}
+            <div class="mt-2 p-1.5 bg-amber-50 border border-amber-200 rounded-lg text-[11px] text-amber-800 font-semibold flex items-center gap-1.5">
+              <i class="fa-solid fa-clock text-amber-600"></i>
+              <span>Tour: {{ lead.tour_date }} at {{ lead.tour_time }}</span>
+            </div>
+            {% endif %}
+          </div>
+
+          {% if lead.notes %}
+          <p class="mt-2 text-[11px] text-slate-500 bg-slate-50 p-2 rounded-lg italic">
+            "{{ lead.notes }}"
+          </p>
+          {% endif %}
+
+          <!-- Move Stage Form -->
+          <form action="{{ url_for('admin_update_lead_stage', lead_id=lead.id) }}" method="POST" class="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
+            <select name="new_stage" onchange="this.form.submit(); LittleMillennium.showLoader('Updating Lead Pipeline Stage...')" class="w-full text-[10px] font-bold px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-slate-700">
+              <option value="" disabled selected>Move to Stage...</option>
+              <option value="New">New Inquiries</option>
+              <option value="Tour Scheduled">Tour Scheduled</option>
+              <option value="Tour Completed">Tour Completed</option>
+              <option value="Application Submitted">Application Submitted</option>
+              <option value="Enrolled">Enrolled & Active</option>
+            </select>
+          </form>
+        </div>
+        {% else %}
+        <div class="text-center py-8 text-xs text-slate-400 italic">
+          No leads in this stage
+        </div>
+        {% endfor %}
+      </div>
+
+    </div>
+    {% endfor %}
+
+  </div>
+
+  <!-- New Lead Modal -->
+  <div id="new-lead-modal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl p-6 max-w-lg w-full shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <h3 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
+          <i class="fa-solid fa-user-plus text-brand-purple"></i>
+          <span>Capture New Inquiry / Tour</span>
+        </h3>
+        <button onclick="document.getElementById('new-lead-modal').classList.add('hidden')" class="p-1 text-slate-400 hover:text-slate-600">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <form action="{{ url_for('admin_create_lead') }}" method="POST" data-loading-msg="Registering Lead & Routing to Program..." class="mt-4 space-y-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Child's Name</label>
+            <input type="text" name="child_name" required placeholder="e.g. Samarth Deshmukh" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Child's Age / DOB</label>
+            <input type="text" name="child_age" required placeholder="e.g. 2 Years 3 Months" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Parent's Name</label>
+            <input type="text" name="parent_name" required placeholder="e.g. Sneha Deshmukh" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Parent Phone (WhatsApp)</label>
+            <input type="text" name="parent_phone" required placeholder="+91 98231 00000" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Program Interested</label>
+          <select name="requested_program" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium">
+            <option value="Infant Care">Infant Care (3 - 12 Months)</option>
+            <option value="Toddler Nest">Toddler Nest (12 - 24 Months)</option>
+            <option value="Playgroup" selected>Playgroup (2 - 3 Years)</option>
+            <option value="Pre-K / Kindergarten">Pre-K / Kindergarten (3 - 5 Years)</option>
+            <option value="After-School Daycare">After-School Daycare (5 - 10 Years)</option>
+          </select>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Schedule Tour Date</label>
+            <input type="date" name="tour_date" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Tour Time Slot</label>
+            <select name="tour_time" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium">
+              <option value="10:00 AM">10:00 AM (Morning Slot)</option>
+              <option value="11:30 AM">11:30 AM (Classroom Observation)</option>
+              <option value="03:30 PM">03:30 PM (Evening Tour)</option>
+              <option value="05:00 PM">05:00 PM (After-Hours Tour)</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Inquiry Notes / Source</label>
+          <textarea name="notes" rows="2" placeholder="Parent works at EON IT Park, referred by colleague..." class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium"></textarea>
+        </div>
+
+        <button type="submit" class="w-full py-2.5 bg-brand-purple hover:bg-purple-800 text-white font-bold rounded-xl text-xs shadow-md transition mt-2">
+          Save Lead & Schedule Tour
+        </button>
+      </form>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

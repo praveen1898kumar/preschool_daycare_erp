@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block page_title %}My Reading Bookshelf 📚{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+  <!-- Kid-Friendly Bookshelf Header -->
+  <div class="p-6 bg-gradient-to-r from-amber-400 via-orange-400 to-pink-500 rounded-3xl text-slate-900 shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4">
+    <div class="flex items-center gap-4 text-center sm:text-left">
+      <div class="w-16 h-16 rounded-3xl bg-white/90 shadow-md flex items-center justify-center text-3xl shrink-0">
+        📚
+      </div>
+      <div>
+        <h2 class="text-2xl md:text-3xl font-black">My Storybook Bookshelf!</h2>
+        <p class="text-xs font-bold text-slate-800 mt-0.5">
+          You have read <strong>{{ books|length }} books</strong> this term! Keep reading to collect shiny stickers!
+        </p>
+      </div>
+    </div>
+
+    <button onclick="document.getElementById('log-book-modal').classList.remove('hidden')" class="px-5 py-3 bg-white hover:bg-slate-50 text-slate-900 rounded-2xl text-xs font-black shadow-md transition flex items-center gap-2">
+      <i class="fa-solid fa-plus text-brand-orange"></i>
+      <span>I Read a New Book!</span>
+    </button>
+  </div>
+
+  <!-- Virtual Wooden Bookshelf Grid -->
+  <div class="bg-amber-100/60 border-4 border-amber-300 rounded-3xl p-6 sm:p-8 shadow-inner space-y-6">
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-5">
+      {% for book in books %}
+      <div class="bg-white rounded-2xl p-4 border-2 border-amber-200 shadow-md flex flex-col justify-between items-center text-center transform hover:-translate-y-1 transition group">
+        
+        <!-- Big Fun Book Sticker -->
+        <div class="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-3xl mb-3 shadow-xs group-hover:scale-110 transition">
+          {{ book.sticker_icon }}
+        </div>
+
+        <div>
+          <h4 class="text-xs font-black text-slate-900 leading-snug">{{ book.book_title }}</h4>
+          <p class="text-[10px] text-slate-500 font-medium mt-0.5">{{ book.author }}</p>
+        </div>
+
+        <div class="mt-3 pt-2 border-t border-slate-100 w-full flex items-center justify-between text-[10px] text-amber-700 font-bold">
+          <span>{{ book.pages }} Pages</span>
+          <span>⭐ Star Earned</span>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Wooden Shelf Border Plank -->
+    <div class="w-full h-4 bg-amber-700 rounded-full shadow-md"></div>
+  </div>
+
+  <!-- Log Book Modal -->
+  <div id="log-book-modal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-slate-200">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <h3 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
+          <span>📖 Add Book to My Bookshelf</span>
+        </h3>
+        <button onclick="document.getElementById('log-book-modal').classList.add('hidden')" class="p-1 text-slate-400 hover:text-slate-600">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <form action="{{ url_for('student_log_book') }}" method="POST" data-loading-msg="Adding Star Sticker to Your Bookshelf..." class="mt-4 space-y-3">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Book Title</label>
+          <input type="text" name="book_title" required placeholder="e.g. Peppa Pig Goes to School" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Author</label>
+          <input type="text" name="author" placeholder="e.g. Neville Astley" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Pick a Fun Sticker!</label>
+          <select name="sticker_icon" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-base">
+            <option value="⭐">⭐ Golden Star</option>
+            <option value="🦄">🦄 Magic Unicorn</option>
+            <option value="🚀">🚀 Rocket Ship</option>
+            <option value="🦖">🦖 Dino Explorer</option>
+            <option value="🦁">🦁 Brave Lion</option>
+            <option value="🌈">🌈 Rainbow</option>
+          </select>
+        </div>
+
+        <button type="submit" class="w-full py-2.5 bg-brand-orange hover:bg-orange-600 text-white font-bold rounded-xl text-xs shadow-md transition mt-2">
+          Put on My Bookshelf!
+        </button>
+      </form>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

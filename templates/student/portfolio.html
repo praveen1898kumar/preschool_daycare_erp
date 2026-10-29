@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block page_title %}My Fun Achievements & Badges! ⭐{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+  <!-- Gamified Kid-Friendly Banner -->
+  <div class="p-6 bg-gradient-to-r from-amber-400 via-orange-400 to-pink-500 rounded-3xl text-slate-900 shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4">
+    <div class="flex items-center gap-4 text-center sm:text-left">
+      <div class="w-16 h-16 rounded-3xl bg-white/90 shadow-md flex items-center justify-center text-3xl shrink-0 animate-bounce">
+        🌟
+      </div>
+      <div>
+        <h2 class="text-2xl md:text-3xl font-black tracking-tight">Superstar {{ current_user.name }}!</h2>
+        <p class="text-xs font-bold text-slate-800 mt-0.5">
+          Little Millennium Explorer • You have earned <strong>{{ badges|length }} Awesome Badges</strong>!
+        </p>
+      </div>
+    </div>
+
+    <a href="{{ url_for('student_bookshelf') }}" data-loader="Opening My Reading Bookshelf..." class="px-5 py-3 bg-white hover:bg-slate-50 text-slate-900 rounded-2xl text-xs font-black shadow-md transition flex items-center gap-2">
+      <i class="fa-solid fa-book-open text-brand-orange text-base"></i>
+      <span>My Reading Bookshelf</span>
+    </a>
+  </div>
+
+  <!-- Big Interactive Digital Badges Grid -->
+  <div>
+    <h3 class="text-base font-black text-slate-900 mb-3 flex items-center gap-2">
+      <span>🏆 Tap Any Badge to Hear Fanfare!</span>
+    </h3>
+
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+      {% for badge in badges %}
+      <div onclick="LittleMillennium.playChime('badge'); LittleMillennium.toast('Superstar Badge!', '{{ badge.badge_title }} - {{ badge.description }}', 'success');" class="bg-white rounded-3xl border-3 border-amber-200 p-5 shadow-sm hover:shadow-xl transition cursor-pointer badge-pop flex flex-col items-center text-center group">
+        
+        <div class="w-20 h-20 rounded-full bg-gradient-to-br from-amber-100 to-amber-200 border-2 border-amber-300 flex items-center justify-center text-4xl mb-3 shadow-inner group-hover:scale-110 transition">
+          {{ badge.badge_icon }}
+        </div>
+
+        <span class="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 mb-1.5">
+          {{ badge.category }}
+        </span>
+
+        <h4 class="text-sm font-black text-slate-900 leading-tight">{{ badge.badge_title }}</h4>
+        <p class="text-[11px] text-slate-500 mt-1 leading-snug">{{ badge.description }}</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Digital Art Gallery -->
+  <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm p-6 space-y-4">
+    <div class="flex items-center justify-between">
+      <div>
+        <h3 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
+          <i class="fa-solid fa-palette text-pink-500"></i>
+          <span>My Classroom Art & Projects</span>
+        </h3>
+        <p class="text-xs text-slate-500">Paintings and craft projects made in the classroom</p>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div class="rounded-2xl overflow-hidden border border-slate-200 shadow-xs group">
+        <img src="https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=400" alt="Finger Painting" class="w-full h-48 object-cover group-hover:scale-105 transition duration-300">
+        <div class="p-3 bg-white">
+          <p class="text-xs font-bold text-slate-900">Green Frog Handprints</p>
+          <span class="text-[10px] text-slate-400">Sensory Art • Oct 28</span>
+        </div>
+      </div>
+
+      <div class="rounded-2xl overflow-hidden border border-slate-200 shadow-xs group">
+        <img src="https://images.unsplash.com/photo-1596461404969-9ae70f2830c1?w=400" alt="Tower Building" class="w-full h-48 object-cover group-hover:scale-105 transition duration-300">
+        <div class="p-3 bg-white">
+          <p class="text-xs font-bold text-slate-900">Mega Tower Castle</p>
+          <span class="text-[10px] text-slate-400">Block Engineering • Oct 26</span>
+        </div>
+      </div>
+
+      <div class="rounded-2xl overflow-hidden border border-slate-200 shadow-xs group">
+        <img src="https://images.unsplash.com/photo-1544717305-2782549b5136?w=400" alt="Playdough Shapes" class="w-full h-48 object-cover group-hover:scale-105 transition duration-300">
+        <div class="p-3 bg-white">
+          <p class="text-xs font-bold text-slate-900">Playdough Sunflowers</p>
+          <span class="text-[10px] text-slate-400">Fine Motor • Oct 24</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

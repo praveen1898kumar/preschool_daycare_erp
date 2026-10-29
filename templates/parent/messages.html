@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block page_title %}Secure Two-Way Family Messaging{% endblock %}
+
+{% block content %}
+<div class="space-y-5">
+
+  <!-- Chat Container Card -->
+  <div class="bg-white rounded-3xl border border-slate-200/80 shadow-2xs overflow-hidden flex flex-col h-[75vh]">
+    
+    <!-- Chat Header with Tri-Party Sync Indicator (USER MANDATE) -->
+    <div class="p-3.5 bg-slate-50 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="relative">
+          <img src="{{ teacher.avatar or 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150' }}" alt="Teacher" class="w-10 h-10 rounded-full object-cover border-2 border-brand-teal">
+          <span class="w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-white absolute bottom-0 right-0"></span>
+        </div>
+        <div>
+          <h3 class="text-xs sm:text-sm font-extrabold text-slate-900 leading-tight">
+            {{ teacher.name }} (Lead Educator) & Center Director
+          </h3>
+          <p class="text-[10px] text-slate-500">
+            For: <strong class="text-slate-800">{{ child.first_name }} {{ child.last_name }}</strong> (Roll: {{ child.roll_number }}) • {{ child.classroom_name }}
+          </p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <span class="px-2.5 py-0.5 bg-indigo-50 border border-indigo-200 text-indigo-700 text-[10px] font-bold rounded-lg flex items-center gap-1.5">
+          <i class="fa-solid fa-eye text-indigo-500"></i>
+          <span>Seen by Teacher & Director</span>
+        </span>
+        <span class="px-2 py-0.5 bg-amber-50 border border-amber-200 text-amber-800 text-[10px] font-bold rounded-lg">
+          DND: 7 PM - 7:30 AM
+        </span>
+      </div>
+    </div>
+
+    <!-- Messages Scroll Body -->
+    <div class="flex-1 p-4 overflow-y-auto space-y-3.5 bg-slate-50/40">
+      {% for msg in chat_messages %}
+      <div class="flex flex-col {% if msg.sender_role == 'parent' %}items-end{% else %}items-start{% endif %}">
+        
+        <div class="max-w-md p-3.5 rounded-2xl shadow-2xs text-xs {% if msg.sender_role == 'parent' %}bg-brand-teal text-white rounded-br-none{% elif msg.sender_role == 'director' %}bg-brand-purple text-white rounded-bl-none{% else %}bg-white border border-slate-200 text-slate-800 rounded-bl-none{% endif %}">
+          <div class="text-[9px] font-bold uppercase tracking-wider mb-1 opacity-80">
+            {% if msg.sender_role == 'parent' %}You (Parent)
+            {% elif msg.sender_role == 'director' %}Center Director (Chanchal Sharma)
+            {% else %}Lead Teacher (Ananya Deshmukh){% endif %}
+          </div>
+
+          <p class="leading-relaxed">
+            {{ msg.message_text }}
+          </p>
+
+          <!-- Auto-Translated Tag (ESL / Hindi / English Support) -->
+          {% if msg.translated_text %}
+          <div class="mt-2 pt-1.5 border-t {% if msg.sender_role in ['parent', 'director'] %}border-white/20 text-teal-100{% else %}border-slate-100 text-slate-500{% endif %} text-[10px] italic">
+            {{ msg.translated_text }}
+          </div>
+          {% endif %}
+        </div>
+
+        <span class="text-[9px] text-slate-400 font-medium mt-0.5 px-1 font-mono">
+          {{ msg.sent_at }} • Delivered
+        </span>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Message Input Bar -->
+    <form action="{{ url_for('parent_send_message') }}" method="POST" data-loading-msg="Delivering Note to Teacher & Director..." class="p-3 bg-white border-t border-slate-200 flex items-center gap-2">
+      <input type="hidden" name="receiver_id" value="{{ teacher.id }}">
+      <input type="hidden" name="student_id" value="{{ child.id }}">
+      
+      <input type="text" name="message_text" required placeholder="Type a note to teacher and director..." class="flex-1 px-4 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-xs font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500">
+
+      <button type="submit" class="px-4 py-2.5 bg-brand-teal hover:bg-teal-700 text-white font-bold rounded-xl text-xs shadow-2xs transition flex items-center gap-1.5">
+        <i class="fa-solid fa-paper-plane"></i>
+        <span>Send</span>
+      </button>
+    </form>
+
+  </div>
+
+</div>
+{% endblock %}

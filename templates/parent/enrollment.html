@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+{% block page_title %}Digital Enrollment Packet • 100% Paperless E-Sign{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+  <!-- Header Banner -->
+  <div class="p-6 bg-gradient-to-r from-teal-700 via-emerald-700 to-indigo-800 rounded-3xl text-white shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+    <div>
+      <span class="px-2.5 py-1 bg-white/20 text-[10px] font-black uppercase tracking-wider rounded-lg border border-white/20">
+        Paperless Admissions Pack
+      </span>
+      <h2 class="text-xl md:text-2xl font-black mt-1">Digital Registration & Legal E-Signature</h2>
+      <p class="text-xs text-teal-100 mt-1">
+        Zero DocuSign fees. Legally compliant digital enrollment packet executed via HTML5 Canvas.
+      </p>
+    </div>
+
+    <div class="flex items-center gap-2">
+      <span class="px-3 py-1 bg-emerald-500 text-white rounded-xl text-xs font-bold">100% Paperless</span>
+    </div>
+  </div>
+
+  <form action="{{ url_for('parent_submit_enrollment') }}" method="POST" data-loading-msg="Validating Digital Signature & Storing Encrypted Packet..." class="space-y-6">
+    
+    <!-- Enrollment Packet Card -->
+    <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm p-6 sm:p-8 space-y-6 max-w-4xl mx-auto">
+      
+      <!-- Progress Bar -->
+      <div>
+        <div class="flex items-center justify-between text-xs font-bold text-slate-500 mb-2">
+          <span>Admissions Packet Progress</span>
+          <span class="text-brand-teal font-black">Step 3 of 3: Parent E-Signature</span>
+        </div>
+        <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+          <div class="bg-gradient-to-r from-brand-blue to-brand-teal h-full rounded-full w-full"></div>
+        </div>
+      </div>
+
+      <!-- Section 1: Child Identity & Program Confirmation -->
+      <div class="p-5 bg-slate-50 rounded-2xl border border-slate-200/70 space-y-3">
+        <h3 class="text-sm font-extrabold text-slate-900 flex items-center gap-2">
+          <i class="fa-solid fa-child text-brand-teal"></i>
+          <span>1. Student Identity & Campus Registration</span>
+        </h3>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Child's Full Name</label>
+            <input type="text" name="child_name" value="{{ child.first_name }} {{ child.last_name }}" readonly class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-bold text-slate-800">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Program</label>
+            <input type="text" value="{{ child.classroom_name }}" readonly class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-bold text-slate-800">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Assigned Campus</label>
+            <input type="text" value="Little Millennium Kharadi" readonly class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-bold text-slate-800">
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 2: Medical & Allergy Legal Disclosure -->
+      <div class="p-5 bg-slate-50 rounded-2xl border border-slate-200/70 space-y-3">
+        <h3 class="text-sm font-extrabold text-slate-900 flex items-center gap-2">
+          <i class="fa-solid fa-notes-medical text-rose-500"></i>
+          <span>2. Medical & Emergency Care Consent</span>
+        </h3>
+
+        <div class="text-xs text-slate-600 leading-relaxed bg-white p-4 rounded-xl border border-slate-200 space-y-2">
+          <p>
+            <strong>Allergy Disclosure:</strong> I confirm that any known food, medication, or environmental allergies (e.g. Peanuts, Dairy, Latex) have been disclosed truthfully to the center director.
+          </p>
+          <p>
+            <strong>Emergency First Aid:</strong> In the event of an urgent medical situation where parent or emergency contacts cannot be immediately reached, I authorize Little Millennium Kharadi staff to administer basic first aid and contact certified medical emergency responders.
+          </p>
+        </div>
+
+        <div class="flex items-center gap-2 pt-1">
+          <input type="checkbox" id="consent-check" required checked class="w-4 h-4 text-brand-teal rounded border-slate-300 focus:ring-teal-500">
+          <label for="consent-check" class="text-xs font-bold text-slate-800">I have read, understood, and accept all terms of enrollment & medical consent.</label>
+        </div>
+      </div>
+
+      <!-- Section 3: Native HTML5 Canvas E-Signature Pad (Zero DocuSign API Cost) -->
+      <div class="p-5 bg-slate-50 rounded-2xl border border-slate-200/70 space-y-3">
+        <div class="flex items-center justify-between">
+          <h3 class="text-sm font-extrabold text-slate-900 flex items-center gap-2">
+            <i class="fa-solid fa-signature text-brand-teal"></i>
+            <span>3. Parent Digital Signature Pad</span>
+          </h3>
+          <span class="text-[11px] text-slate-400">Touch or mouse-enabled</span>
+        </div>
+
+        <p class="text-xs text-slate-500">
+          Please sign inside the signature box below using your finger, stylus, or mouse:
+        </p>
+
+        <!-- Canvas Container -->
+        <div class="relative bg-white rounded-2xl border-2 border-dashed border-slate-300 p-2 shadow-inner">
+          <canvas id="signature-pad" class="w-full h-44 bg-white rounded-xl cursor-crosshair touch-none"></canvas>
+          <div class="absolute bottom-3 left-4 text-[10px] text-slate-400 pointer-events-none font-mono">
+            Little Millennium Kharadi E-Sign • Touch / Stylus Verified
+          </div>
+        </div>
+
+        <!-- Hidden Input to Store Base64 Image -->
+        <input type="hidden" name="signature_data" id="signature-data">
+
+        <!-- Controls -->
+        <div class="flex items-center justify-between pt-2">
+          <button type="button" id="clear-signature-btn" class="px-3.5 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl text-xs transition flex items-center gap-1.5">
+            <i class="fa-solid fa-eraser"></i>
+            <span>Clear Signature</span>
+          </button>
+          <span class="text-[11px] text-emerald-600 font-bold flex items-center gap-1">
+            <i class="fa-solid fa-shield-halved"></i>
+            <span>Legally Compliant Digital Audit Trail</span>
+          </span>
+        </div>
+      </div>
+
+      <!-- Final Submit Button -->
+      <button type="submit" class="w-full py-3.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white font-black rounded-2xl text-sm shadow-xl shadow-teal-500/20 transition transform active:scale-95 flex items-center justify-center gap-2">
+        <i class="fa-solid fa-check-double text-base"></i>
+        <span>Execute Paperless Enrollment & Submit to Center</span>
+      </button>
+
+    </div>
+
+  </form>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    if (window.DigitalSignaturePad) {
+      new DigitalSignaturePad('signature-pad', 'clear-signature-btn', 'signature-data');
+    }
+  });
+</script>
+{% endblock %}

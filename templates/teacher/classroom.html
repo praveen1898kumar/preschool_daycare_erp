@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block page_title %}Classroom Roster & Safety Monitor{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+  <!-- Classroom Header -->
+  <div class="p-6 bg-gradient-to-r from-sky-700 via-indigo-700 to-purple-800 rounded-3xl text-white shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+    <div>
+      <span class="px-2.5 py-1 bg-white/20 text-[10px] font-black uppercase tracking-wider rounded-lg border border-white/20">
+        Active Classroom
+      </span>
+      <h2 class="text-xl md:text-2xl font-black mt-1">{{ classroom.name }} ({{ classroom.room_number }})</h2>
+      <p class="text-xs text-sky-100 mt-1">
+        Lead Educator: <strong>{{ current_user.name }}</strong> • Target Ratio: {{ classroom.max_ratio }}:1
+      </p>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <a href="{{ url_for('teacher_daily_sheets') }}" data-loader="Opening Bulk Daily Sheet..." class="px-4 py-2.5 bg-amber-400 hover:bg-amber-500 text-slate-900 rounded-xl text-xs font-black shadow-md transition flex items-center gap-2">
+        <i class="fa-solid fa-bolt text-sm"></i>
+        <span>Bulk Daily Sheet Log</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- Children Roster Grid (Large Touch-Friendly Cards) -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+    {% for student in students %}
+    <div class="bg-white rounded-2xl border-2 {% if student.epipen_required %}border-rose-400 bg-rose-50/15{% else %}border-slate-200/80{% endif %} p-4 shadow-sm hover:shadow-md transition flex flex-col justify-between">
+      
+      <div>
+        <div class="flex items-start gap-3">
+          <div class="relative">
+            <img src="{{ student.photo_url or 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150' }}" alt="{{ student.first_name }}" class="w-14 h-14 rounded-2xl object-cover border-2 {% if student.epipen_required %}border-rose-500{% else %}border-slate-200{% endif %}">
+            {% if student.epipen_required %}
+            <span class="absolute -top-2 -right-2 px-1.5 py-0.5 bg-rose-600 text-white text-[9px] font-black rounded-md shadow-xs animate-pulse">
+              EpiPen
+            </span>
+            {% endif %}
+          </div>
+
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center justify-between">
+              <h4 class="text-sm font-extrabold text-slate-900 truncate">{{ student.first_name }} {{ student.last_name }}</h4>
+            </div>
+            <p class="text-[10px] font-mono font-bold text-sky-700 bg-sky-50 px-1.5 py-0.5 rounded inline-block mt-0.5">
+              Roll: {{ student.roll_number or 'LM-KHD-004' }}
+            </p>
+            <p class="text-[11px] text-slate-500 font-medium mt-0.5">DOB: {{ student.dob }}</p>
+            <span class="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold {% if student.is_present %}bg-emerald-100 text-emerald-800{% else %}bg-slate-100 text-slate-600{% endif %}">
+              {% if student.is_present %}Present Today ({{ student.check_in_time }}){% else %}Not Checked In{% endif %}
+            </span>
+          </div>
+        </div>
+
+        <!-- Allergy & Health Banner -->
+        {% if student.allergies and student.allergies != 'None' %}
+        <div class="mt-3 p-2 bg-rose-50 border border-rose-200 rounded-xl text-[11px] text-rose-900 font-semibold flex items-center gap-1.5">
+          <i class="fa-solid fa-circle-exclamation text-rose-600 text-xs shrink-0"></i>
+          <span class="truncate">{{ student.allergies }}</span>
+        </div>
+        {% endif %}
+
+        <!-- Emergency & Diet info -->
+        <div class="mt-2.5 text-[11px] text-slate-500 space-y-1">
+          <p><span class="font-bold text-slate-700">Diet:</span> {{ student.dietary_restrictions or 'General' }}</p>
+          <p><span class="font-bold text-slate-700">Emergency:</span> {{ student.emergency_contact_name }} ({{ student.emergency_contact_phone }})</p>
+        </div>
+      </div>
+
+      <!-- Quick Attendance & Action Controls -->
+      <div class="mt-4 pt-3 border-t border-slate-100 flex items-center gap-2">
+        <form action="{{ url_for('teacher_toggle_attendance') }}" method="POST" class="flex-1">
+          <input type="hidden" name="student_id" value="{{ student.id }}">
+          {% if student.is_present %}
+          <button type="submit" name="action" value="check_out" data-loader="Logging Student Pick-Up..." class="w-full py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition">
+            Check Out
+          </button>
+          {% else %}
+          <button type="submit" name="action" value="check_in" data-loader="Logging Student Arrival..." class="w-full py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow-sm transition">
+            Check In
+          </button>
+          {% endif %}
+        </form>
+
+        <a href="{{ url_for('teacher_daily_sheets') }}?preselect={{ student.id }}" data-loader="Opening Daily Sheet..." class="p-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl text-xs font-bold transition" title="Log Activity">
+          <i class="fa-solid fa-plus"></i>
+        </a>
+      </div>
+
+    </div>
+    {% endfor %}
+  </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,273 @@
+{% extends "base.html" %}
+{% block page_title %}Executive Command Center • Director Oversight{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+  <!-- Severe Medical / Allergy Alert Ticker (SAFETY MANDATE) -->
+  {% if allergy_students %}
+  <div class="p-4 bg-rose-50 border-2 border-rose-300 rounded-2xl flex items-center justify-between shadow-sm allergy-pulse">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-rose-600 text-white flex items-center justify-center font-bold text-lg shrink-0">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-black uppercase tracking-wider bg-rose-600 text-white px-2 py-0.5 rounded-md">Safety Alert</span>
+          <span class="text-xs font-bold text-rose-900">Active Severe Allergy & EpiPen Protocol (Kharadi Branch)</span>
+        </div>
+        <div class="flex flex-wrap gap-2 mt-1.5">
+          {% for child in allergy_students %}
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white border border-rose-200 text-rose-900 rounded-lg text-xs font-semibold shadow-xs">
+            <span class="w-2 h-2 rounded-full bg-rose-600 animate-ping"></span>
+            <strong>{{ child.first_name }} {{ child.last_name }}</strong> ({{ child.classroom_name }}): {{ child.allergies }} 
+            {% if child.epipen_required %}<span class="text-[10px] bg-rose-100 text-rose-700 px-1.5 py-0.2 rounded font-extrabold">EpiPen Ready</span>{% endif %}
+          </span>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    <a href="{{ url_for('admin_ratios') }}" class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl shadow transition">
+      <span>View Medical Records</span>
+      <i class="fa-solid fa-arrow-right text-[10px]"></i>
+    </a>
+  </div>
+  {% endif %}
+
+  <!-- KPI Metrics Grid (100% Fluid Width) -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <!-- Metric 1: Students Present Today -->
+    <div class="p-5 bg-white rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
+      <div>
+        <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Checked-In Students</p>
+        <div class="flex items-baseline gap-2 mt-1">
+          <span class="text-2xl font-black text-slate-900">{{ present_students_count }}</span>
+          <span class="text-xs font-bold text-slate-500">/ {{ total_students_count }} enrolled</span>
+        </div>
+        <span class="inline-block mt-2 text-[11px] font-semibold text-emerald-600">
+          <i class="fa-solid fa-arrow-trend-up"></i> {{ ((present_students_count / total_students_count) * 100)|round|int }}% Campus Occupancy
+        </span>
+      </div>
+      <div class="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-xl">
+        <i class="fa-solid fa-children"></i>
+      </div>
+    </div>
+
+    <!-- Metric 2: Staff on Duty -->
+    <div class="p-5 bg-white rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
+      <div>
+        <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Staff on Premises</p>
+        <div class="flex items-baseline gap-2 mt-1">
+          <span class="text-2xl font-black text-slate-900">{{ staff_on_duty_count }}</span>
+          <span class="text-xs font-bold text-slate-500">Educators Clocked In</span>
+        </div>
+        <span class="inline-block mt-2 text-[11px] font-semibold text-emerald-600">
+          <i class="fa-solid fa-circle-check"></i> All 5 Classrooms Covered
+        </span>
+      </div>
+      <div class="w-12 h-12 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center text-xl">
+        <i class="fa-solid fa-chalkboard-user"></i>
+      </div>
+    </div>
+
+    <!-- Metric 3: CRM Tour Inquiries -->
+    <div class="p-5 bg-white rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
+      <div>
+        <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Active CRM Pipeline</p>
+        <div class="flex items-baseline gap-2 mt-1">
+          <span class="text-2xl font-black text-slate-900">{{ active_leads_count }}</span>
+          <span class="text-xs font-bold text-slate-500">Inquiries</span>
+        </div>
+        <span class="inline-block mt-2 text-[11px] font-semibold text-amber-600">
+          <i class="fa-solid fa-calendar-check"></i> 2 Scheduled Today
+        </span>
+      </div>
+      <div class="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center text-xl">
+        <i class="fa-solid fa-bullhorn"></i>
+      </div>
+    </div>
+
+    <!-- Metric 4: Monthly Tuition Collection -->
+    <div class="p-5 bg-white rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
+      <div>
+        <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Tuition Collected</p>
+        <div class="flex items-baseline gap-2 mt-1">
+          <span class="text-2xl font-black text-slate-900">₹{{ "{:,.0f}".format(total_collected_amount) }}</span>
+        </div>
+        <span class="inline-block mt-2 text-[11px] font-semibold text-emerald-600">
+          <i class="fa-solid fa-receipt"></i> Zero Merchant Fee Passthrough
+        </span>
+      </div>
+      <div class="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl">
+        <i class="fa-solid fa-indian-rupee-sign"></i>
+      </div>
+    </div>
+  </div>
+
+  <!-- Real-Time Ratio Live Monitor Strip -->
+  <div class="p-5 bg-white rounded-2xl border border-slate-200/80 shadow-sm">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+      <div>
+        <h3 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
+          <i class="fa-solid fa-users-viewfinder text-brand-purple"></i>
+          <span>Live Regulatory Student-to-Teacher Ratios (Kharadi Branch)</span>
+        </h3>
+        <p class="text-xs text-slate-500">State early childhood safety standards computed against live punches.</p>
+      </div>
+      <a href="{{ url_for('admin_ratios') }}" data-loader="Opening Ratio Command Engine..." class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold transition">
+        <span>Manage Room Allocation</span>
+        <i class="fa-solid fa-arrow-right text-[10px]"></i>
+      </a>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
+      {% for room in classroom_ratios %}
+      <div class="p-4 rounded-2xl border {% if room.is_breached %}border-rose-400 bg-rose-50/50 ratio-alert-flash{% elif room.is_near %}border-amber-300 bg-amber-50/40{% else %}border-emerald-200 bg-emerald-50/30{% endif %} flex flex-col justify-between">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs font-extrabold text-slate-800">{{ room.name }}</span>
+          <span class="text-[10px] font-black px-2 py-0.5 rounded-full {% if room.is_breached %}bg-rose-600 text-white{% elif room.is_near %}bg-amber-500 text-white{% else %}bg-emerald-600 text-white{% endif %}">
+            {% if room.is_breached %}BREACH{% elif room.is_near %}CAUTION{% else %}COMPLIANT{% endif %}
+          </span>
+        </div>
+
+        <div class="flex items-baseline justify-between mt-1">
+          <div>
+            <span class="text-2xl font-black text-slate-900">{{ room.present_count }}:{{ room.staff_count }}</span>
+            <span class="text-[11px] text-slate-500 block">Actual Ratio</span>
+          </div>
+          <div class="text-right">
+            <span class="text-xs font-bold text-slate-700">Max {{ room.max_ratio }}:1</span>
+            <span class="text-[10px] text-slate-400 block">Standard</span>
+          </div>
+        </div>
+
+        <!-- Progress Fill -->
+        <div class="w-full bg-slate-200 h-2 rounded-full mt-3 overflow-hidden">
+          <div class="h-full rounded-full {% if room.is_breached %}bg-rose-600{% elif room.is_near %}bg-amber-500{% else %}bg-emerald-500{% endif %}" style="width: {{ [((room.present_count / (room.staff_count * room.max_ratio if room.staff_count > 0 else 1)) * 100)|round, 100]|min }}%"></div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Charts & Split View Operations -->
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+    
+    <!-- Left 7 Cols: Financial & Classroom Analytics Chart -->
+    <div class="lg:col-span-7 p-5 bg-white rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h3 class="text-sm font-extrabold text-slate-900">Kharadi Campus Enrollment & Capacity Fill</h3>
+          <p class="text-xs text-slate-500">Live headcounts vs maximum approved licensed seats</p>
+        </div>
+        <span class="text-xs font-bold px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-lg">Campus Total: 74 Seats</span>
+      </div>
+      
+      <div class="h-64 relative">
+        <canvas id="occupancyChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Right 5 Cols: Quick Actions & Requisition Alerts -->
+    <div class="lg:col-span-5 space-y-4">
+      
+      <!-- Quick Actions Grid -->
+      <div class="p-5 bg-white rounded-2xl border border-slate-200/80 shadow-sm">
+        <h3 class="text-sm font-extrabold text-slate-900 mb-3">Director Fast-Track Actions</h3>
+        <div class="grid grid-cols-2 gap-2.5">
+          <a href="{{ url_for('admin_crm') }}" data-loader="Opening Inquiry Lead Form..." class="p-3 bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-300 rounded-xl flex items-center gap-2.5 text-xs font-bold text-slate-800 transition">
+            <i class="fa-solid fa-user-plus text-indigo-600"></i>
+            <span>+ New Inquiry Lead</span>
+          </a>
+          <a href="{{ url_for('admin_billing') }}" data-loader="Generating Monthly Tuition Invoices..." class="p-3 bg-slate-50 hover:bg-emerald-50 border border-slate-200 hover:border-emerald-300 rounded-xl flex items-center gap-2.5 text-xs font-bold text-slate-800 transition">
+            <i class="fa-solid fa-receipt text-emerald-600"></i>
+            <span>+ Log Fee Payment</span>
+          </a>
+          <a href="{{ url_for('admin_inventory') }}" data-loader="Checking Supply Requisitions..." class="p-3 bg-slate-50 hover:bg-amber-50 border border-slate-200 hover:border-amber-300 rounded-xl flex items-center gap-2.5 text-xs font-bold text-slate-800 transition">
+            <i class="fa-solid fa-boxes-packing text-amber-600"></i>
+            <span>Review Supplies</span>
+          </a>
+          <a href="{{ url_for('admin_staff') }}" data-loader="Opening Staff Attendance Punch..." class="p-3 bg-slate-50 hover:bg-purple-50 border border-slate-200 hover:border-purple-300 rounded-xl flex items-center gap-2.5 text-xs font-bold text-slate-800 transition">
+            <i class="fa-solid fa-fingerprint text-purple-600"></i>
+            <span>Staff Punch Clock</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- Pending Supply Requests Card -->
+      <div class="p-5 bg-white rounded-2xl border border-slate-200/80 shadow-sm">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-sm font-extrabold text-slate-900 flex items-center gap-2">
+            <i class="fa-solid fa-truck-ramp-box text-amber-500"></i>
+            <span>Urgent Classroom Supplies</span>
+          </h3>
+          <span class="text-xs font-bold text-amber-600">{{ pending_supplies|length }} Pending</span>
+        </div>
+
+        <div class="space-y-2">
+          {% for item in pending_supplies %}
+          <div class="p-3 bg-amber-50/50 border border-amber-200 rounded-xl flex items-center justify-between text-xs">
+            <div>
+              <p class="font-bold text-slate-900">{{ item.item_name }} (Qty: {{ item.quantity }})</p>
+              <p class="text-[11px] text-slate-500">Requested by {{ item.teacher_name }} • {{ item.classroom_name }}</p>
+            </div>
+            <form action="{{ url_for('admin_approve_supply', request_id=item.id) }}" method="POST">
+              <button type="submit" data-loader="Approving Supply Requisition..." class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-[11px] shadow-sm transition">
+                Approve
+              </button>
+            </form>
+          </div>
+          {% else %}
+          <p class="text-xs text-slate-400 py-3 text-center">No pending supply requests.</p>
+          {% endfor %}
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  // Render Occupancy Chart using Chart.js
+  document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('occupancyChart');
+    if (ctx) {
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['Infant Care', 'Toddler Nest', 'Playgroup', 'Pre-K', 'After-School'],
+          datasets: [
+            {
+              label: 'Active Checked In',
+              data: [3, 5, 5, 4, 3],
+              backgroundColor: '#7B2CBF',
+              borderRadius: 6
+            },
+            {
+              label: 'Classroom Capacity',
+              data: [9, 15, 14, 16, 20],
+              backgroundColor: '#E2E8F0',
+              borderRadius: 6
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'top', labels: { boxWidth: 12, font: { weight: 'bold', size: 11 } } }
+          },
+          scales: {
+            y: { beginAtZero: true, grid: { color: '#F1F5F9' } },
+            x: { grid: { display: false } }
+          }
+        }
+      });
+    }
+  });
+</script>
+{% endblock %}

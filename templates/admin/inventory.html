@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+{% block page_title %}Inventory & Classroom Supply Requisitions{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+  <!-- Low Stock Alert Banner -->
+  {% if low_stock_items %}
+  <div class="p-4 bg-amber-50 border-2 border-amber-300 rounded-2xl flex items-center justify-between shadow-sm">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center font-bold text-lg shrink-0">
+        <i class="fa-solid fa-boxes-stacked"></i>
+      </div>
+      <div>
+        <h4 class="text-xs font-black uppercase tracking-wider text-amber-900">Low Stock Threshold Warning</h4>
+        <p class="text-xs text-amber-800 mt-0.5">
+          {{ low_stock_items|length }} classroom essentials are below minimum reserve thresholds:
+          {% for item in low_stock_items %}
+          <strong>{{ item.item_name }}</strong> ({{ item.current_stock }} {{ item.unit }} left){% if not loop.last %}, {% endif %}
+          {% endfor %}
+        </p>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Inventory Stock Grid -->
+  <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm p-6">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+      <div>
+        <h3 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
+          <i class="fa-solid fa-warehouse text-brand-purple"></i>
+          <span>Classroom Consumables Stock Levels</span>
+        </h3>
+        <p class="text-xs text-slate-500">Hygiene, sanitizers, diapering, first-aid, and early-childhood art supplies.</p>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      {% for item in inventory %}
+      <div class="p-4 rounded-2xl border {% if item.current_stock <= item.min_threshold %}border-amber-300 bg-amber-50/30{% else %}border-slate-200/70 bg-white{% endif %} flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-slate-100 text-slate-600">
+              {{ item.category }}
+            </span>
+            {% if item.current_stock <= item.min_threshold %}
+            <span class="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-500 text-white">LOW STOCK</span>
+            {% else %}
+            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">SUFFICIENT</span>
+            {% endif %}
+          </div>
+
+          <h4 class="text-sm font-extrabold text-slate-900 leading-snug">{{ item.item_name }}</h4>
+          
+          <div class="flex items-baseline gap-2 mt-3">
+            <span class="text-2xl font-black text-slate-900">{{ item.current_stock }}</span>
+            <span class="text-xs font-bold text-slate-500">{{ item.unit }}</span>
+            <span class="text-xs text-slate-400 ml-auto font-medium">Min: {{ item.min_threshold }}</span>
+          </div>
+
+          <!-- Progress Bar -->
+          <div class="w-full bg-slate-100 h-2 rounded-full mt-2 overflow-hidden">
+            <div class="h-full rounded-full {% if item.current_stock <= item.min_threshold %}bg-amber-500{% else %}bg-emerald-500{% endif %}" style="width: {{ [(item.current_stock / (item.min_threshold * 2)) * 100, 100]|min }}%"></div>
+          </div>
+        </div>
+
+        <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
+          <span>Restocked: {{ item.last_restocked }}</span>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Teacher Requisition Approval Kanban -->
+  <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm p-6">
+    <div class="flex items-center justify-between mb-5">
+      <div>
+        <h3 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
+          <i class="fa-solid fa-list-check text-brand-purple"></i>
+          <span>Teacher Supply Requisition Kanban</span>
+        </h3>
+        <p class="text-xs text-slate-500">Preventing the "we ran out of wipes" classroom emergency.</p>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      
+      <!-- Pending Column -->
+      <div class="bg-amber-50/50 p-4 rounded-2xl border border-amber-200">
+        <h4 class="text-xs font-extrabold text-amber-900 uppercase tracking-wider mb-3 flex items-center justify-between">
+          <span>Pending Approvals</span>
+          <span class="px-2 py-0.5 bg-amber-200 text-amber-900 rounded-full text-[10px]">{{ requests_by_status['Pending']|length }}</span>
+        </h4>
+        <div class="space-y-3">
+          {% for req in requests_by_status['Pending'] %}
+          <div class="bg-white p-3.5 rounded-xl border border-amber-200 shadow-xs">
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-100 text-rose-700">{{ req.urgency }}</span>
+              <span class="text-[10px] text-slate-400 font-mono">{{ req.created_at[:10] }}</span>
+            </div>
+            <p class="text-xs font-extrabold text-slate-900 mt-2">{{ req.item_name }} (Qty: {{ req.quantity }})</p>
+            <p class="text-[11px] text-slate-500 mt-0.5">By {{ req.teacher_name }} • {{ req.classroom_name }}</p>
+            {% if req.notes %}<p class="text-[10px] italic text-slate-400 mt-1.5 bg-slate-50 p-1.5 rounded">"{{ req.notes }}"</p>{% endif %}
+
+            <form action="{{ url_for('admin_update_supply_status', req_id=req.id) }}" method="POST" class="mt-3 pt-2 border-t border-slate-100 flex items-center gap-2">
+              <button type="submit" name="status" value="Approved" data-loader="Approving Requisition..." class="flex-1 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition">
+                Approve Order
+              </button>
+            </form>
+          </div>
+          {% else %}
+          <p class="text-xs text-slate-400 py-6 text-center italic">No pending requests</p>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Approved Column -->
+      <div class="bg-indigo-50/50 p-4 rounded-2xl border border-indigo-200">
+        <h4 class="text-xs font-extrabold text-indigo-900 uppercase tracking-wider mb-3 flex items-center justify-between">
+          <span>Approved (In Procurement)</span>
+          <span class="px-2 py-0.5 bg-indigo-200 text-indigo-900 rounded-full text-[10px]">{{ requests_by_status['Approved']|length }}</span>
+        </h4>
+        <div class="space-y-3">
+          {% for req in requests_by_status['Approved'] %}
+          <div class="bg-white p-3.5 rounded-xl border border-indigo-200 shadow-xs">
+            <p class="text-xs font-extrabold text-slate-900">{{ req.item_name }} (Qty: {{ req.quantity }})</p>
+            <p class="text-[11px] text-slate-500 mt-0.5">By {{ req.teacher_name }} • {{ req.classroom_name }}</p>
+
+            <form action="{{ url_for('admin_update_supply_status', req_id=req.id) }}" method="POST" class="mt-3 pt-2 border-t border-slate-100 flex items-center gap-2">
+              <button type="submit" name="status" value="Dispatched" data-loader="Marking Dispatched to Classroom..." class="flex-1 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition">
+                Dispatch to Room
+              </button>
+            </form>
+          </div>
+          {% else %}
+          <p class="text-xs text-slate-400 py-6 text-center italic">No items in procurement</p>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Dispatched Column -->
+      <div class="bg-emerald-50/50 p-4 rounded-2xl border border-emerald-200">
+        <h4 class="text-xs font-extrabold text-emerald-900 uppercase tracking-wider mb-3 flex items-center justify-between">
+          <span>Delivered to Classroom</span>
+          <span class="px-2 py-0.5 bg-emerald-200 text-emerald-900 rounded-full text-[10px]">{{ requests_by_status['Dispatched']|length }}</span>
+        </h4>
+        <div class="space-y-3">
+          {% for req in requests_by_status['Dispatched'] %}
+          <div class="bg-white p-3.5 rounded-xl border border-emerald-200 shadow-xs">
+            <p class="text-xs font-extrabold text-slate-900">{{ req.item_name }} (Qty: {{ req.quantity }})</p>
+            <p class="text-[11px] text-emerald-700 font-semibold mt-0.5">✓ Delivered to {{ req.classroom_name }}</p>
+          </div>
+          {% else %}
+          <p class="text-xs text-slate-400 py-6 text-center italic">No delivered items</p>
+          {% endfor %}
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+{% endblock %}
